@@ -10,10 +10,21 @@ from pydantic import BaseModel
 from audio_processor import AudioProcessor
 from typing import List, Optional
 
+from ai_service import AIService
+
 app = FastAPI(title="China Eastern Call Processor")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
 processor = AudioProcessor(config_path=CONFIG_PATH)
+
+# Initialize global AI Service for the API
+try:
+    global_ai = AIService(processor.config)
+    print("--- AI Service Initialized for API ---")
+except Exception as e:
+    print(f"--- Warning: AI Service failed to init: {e} ---")
+    global_ai = None
+
 print("--- Server Initialized with FFmpeg robustness fix ---")
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
@@ -59,6 +70,9 @@ def update_config(req: ConfigUpdateRequest):
     if req.active_ai:
         from ai_service import AIService
         processor.ai = AIService(processor.config)
+        # Update global AI too
+        global global_ai
+        global_ai = AIService(processor.config)
     
     return {"status": "success", "config": processor.config}
 
@@ -121,8 +135,12 @@ def get_files():
                         elif d_info["type"] == "Phone":
                             wav_dir = processor.config["WAV_DIR"]
                             w_chk = os.path.join(wav_dir, f"{base_name}.wav")
+                            t_chk = os.path.join(wav_dir, f"{base_name}.txt")
+                            
                             if os.path.exists(w_chk):
                                 source_path = w_chk
+                            elif os.path.exists(t_chk):
+                                source_path = t_chk
                         
                         # Get timestamp
                         from datetime import datetime
@@ -232,6 +250,18 @@ def delete_file(source_type: str, file_name: str):
         return {"status": "success", "message": "Record cleaned up (files might be already missing)"}
     return {"status": "success", "message": f"Record {file_name} deleted successfully"}
 
+class RepliedRequest(BaseModel):
+    file_name: str
+    source_type: str
+    status: bool
+
+@app.post("/api/replied")
+def update_replied(req: RepliedRequest):
+    success = processor.set_replied(req.file_name, req.source_type, req.status)
+    if not success:
+        raise HTTPException(status_code=404, detail="File not found")
+    return {"status": "success"}
+
 @app.post("/api/called-back")
 def update_called_back(req: CalledBackRequest):
     """Updates the called back status for a record."""
@@ -294,9 +324,6 @@ def launch_chrome():
         subprocess.Popen(cmd)
         import time
         time.sleep(2) # Wait for launch
-    except Exception as e:
-        print(f"Failed to launch Chrome: {e}")
-
     except Exception as e:
         print(f"Failed to launch Chrome: {e}")
 
@@ -485,6 +512,49 @@ except Exception as e:
             
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+class TemplateUpdateRequest(BaseModel):
+    templates: dict
+
+@app.get("/api/templates")
+def get_templates():
+    """Returns the content of templates.json."""
+    tmpl_path = os.path.join(BASE_DIR, "templates.json")
+    if os.path.exists(tmpl_path):
+        with open(tmpl_path, "r", encoding="utf-8") as f:
+            try:
+                return json.load(f)
+            except:
+                return {}
+    return {}
+
+@app.post("/api/templates")
+def save_templates(req: TemplateUpdateRequest):
+    """Saves updates to templates.json."""
+    tmpl_path = os.path.join(BASE_DIR, "templates.json")
+    try:
+        with open(tmpl_path, "w", encoding="utf-8") as f:
+            json.dump(req.templates, f, indent=4, ensure_ascii=False)
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class GenerateReplyRequest(BaseModel):
+    history_text: str
+    template_content: Optional[str] = ""
+
+@app.post("/api/generate-reply")
+def generate_reply(req: GenerateReplyRequest):
+    """Generates an AI reply based on history and template."""
+    global global_ai
+    if not global_ai:
+        raise HTTPException(status_code=500, detail="AI Service is not initialized.")
+    
+    try:
+        reply = global_ai.generate_reply_from_history(req.history_text, template_text=req.template_content)
+        return {"reply": reply}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

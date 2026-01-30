@@ -2,6 +2,7 @@
 import os
 import subprocess
 import json
+import re
 
 # --- VERY EARLY FFmpeg Discovery ---
 # This MUST run before whisper or moviepy imports as they may check environment on load
@@ -83,6 +84,25 @@ class AudioProcessor:
             return True
         except Exception as e:
             print(f"Error updating called_back status: {e}")
+            return False
+
+    def set_replied(self, file_name, source_type, status):
+        """Updates the replied status in the analysis JSON."""
+        json_path = self.get_file_path(file_name, source_type, ".json")
+        if not os.path.exists(json_path):
+            return False
+            
+        try:
+            with open(json_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            data["replied"] = status
+            
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=4)
+            return True
+        except Exception as e:
+            print(f"Error updating replied status: {e}")
             return False
 
     def process_video_to_mp3(self, video_path, force=False):
@@ -208,6 +228,54 @@ class AudioProcessor:
             # print(f"DEBUG PATH in process: {os.environ.get('PATH')}")
         return None
 
+    def process_missed_call(self, txt_path, output_dir):
+        """Processes a synthetic missed call log into a JSON record."""
+        base_name = os.path.splitext(os.path.basename(txt_path))[0]
+        json_path = os.path.join(output_dir, f"{base_name}.json")
+        
+        try:
+            with open(txt_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # Extract count e.g. "Missed Calls: 3"
+            count = 1
+            match = re.search(r"Missed Calls:\s*(\d+)", content)
+            if match:
+                count = int(match.group(1))
+            
+            print(f"  [MissedCall] Processing aggregated record: {base_name} (Count: {count})")
+            
+            # Create a synthetic analysis object
+            # We skip heavy AI processing and just use a standard template or minimal AI check
+            text = f"System detected {count} missed calls from this number. No voicemail was left."
+            
+            # Extract phone number from filename YYYY-MM-DD_phone_missed
+            phone = "Unknown"
+            parts = base_name.split('_')
+            if len(parts) >= 2:
+                phone = parts[1]
+            
+            analysis = self.ai.analyze_transcription(text)
+            analysis["text"] = text
+            analysis["file_name"] = base_name
+            analysis["phone"] = phone
+            analysis["call_count"] = count # Special field for UI
+            analysis["is_missed_call"] = True
+            
+            # Force urgency if multiple missed calls
+            if count > 1:
+                analysis["is_urgent"] = True
+                analysis["urgency_reason"] = f"User called {count} times without leaving a message."
+
+            # Save analysis
+            with open(json_path, "w", encoding="utf-8") as f:
+                json.dump(analysis, f, ensure_ascii=False, indent=4)
+                
+            return analysis
+        except Exception as e:
+            print(f"Error processing missed call log {txt_path}: {e}")
+            return None
+
     def process_all(self):
         self.ensure_dirs()
         
@@ -225,12 +293,21 @@ class AudioProcessor:
 
         # 2. Process WAVs
         if os.path.exists(self.config["WAV_DIR"]):
+            # Process Audio files
             wav_files = [f for f in os.listdir(self.config["WAV_DIR"]) if f.lower().endswith('.wav')]
             if wav_files:
                 print(f"发现 {len(wav_files)} 个音频采集文件 (WAV)")
                 for wf in wav_files:
                     w_path = os.path.join(self.config["WAV_DIR"], wf)
                     self.transcribe(w_path, self.config["WAV_TXT_DIR"])
+            
+            # Process Missed Call Text Logs
+            txt_logs = [f for f in os.listdir(self.config["WAV_DIR"]) if f.lower().endswith('_missed.txt')]
+            if txt_logs:
+                print(f"发现 {len(txt_logs)} 个未接来电记录")
+                for tf in txt_logs:
+                    t_path = os.path.join(self.config["WAV_DIR"], tf)
+                    self.process_missed_call(t_path, self.config["WAV_TXT_DIR"])
         
         print(">>> 扫描处理结束。\n")
 

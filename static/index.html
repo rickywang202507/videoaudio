@@ -22,6 +22,8 @@
             <div class="actions" style="display: flex; align-items: center;">
                 <button id="settingsBtn" class="btn-secondary" style="margin-right: 1rem;" onclick="openSettings()">⚙️
                     Settings</button>
+                <button id="templatesBtn" class="btn-secondary" style="margin-right: 1rem;" onclick="openTemplates()">📝
+                    Templates</button>
                 <select id="aiSelect" class="btn-secondary"
                     style="background: rgba(45, 55, 72, 0.9); color: white; border: 1px solid rgba(255, 255, 255, 0.2); padding: 0.75rem 1rem; border-radius: 12px; margin-right: 1.5rem; cursor: pointer; min-width: 150px; font-weight: 600; appearance: auto;">
                     <!-- Options will be populated -->
@@ -98,6 +100,89 @@
             </div>
         </div>
 
+        <!-- Templates Modal -->
+        <div id="templatesModal"
+            style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center;">
+            <div
+                style="background: var(--bg-card); padding: 2rem; border-radius: 20px; width: 900px; max-width: 95%; height: 85vh; display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(16px);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h2 style="margin: 0;">📝 Template Editor</h2>
+                    <div style="display: flex; gap: 1rem;">
+                        <button class="btn-primary" onclick="saveTemplates()">💾 Save Changes</button>
+                        <button class="btn-secondary"
+                            onclick="document.getElementById('templatesModal').style.display='none'">✕</button>
+                    </div>
+                </div>
+
+                <div style="display: flex; flex: 1; gap: 2rem; overflow: hidden;">
+                    <!-- Left: List -->
+                    <div
+                        style="width: 250px; border-right: 1px solid rgba(255,255,255,0.1); overflow-y: auto; padding-right: 1rem;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h3 style="font-size: 0.9rem; color: var(--text-muted); margin: 0;">Your Templates</h3>
+                            <button class="btn-secondary" style="font-size: 0.7rem; padding: 2px 8px;"
+                                onclick="addNewTemplate()">➕ New</button>
+                        </div>
+                        <div id="templateList" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <!-- List items -->
+                        </div>
+                    </div>
+
+                    <!-- Right: Editor -->
+                    <div style="flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding-right: 1rem;">
+                        <div id="editorContainer" style="display: none;">
+                            <div
+                                style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                                <div style="flex: 1; margin-right: 1rem;">
+                                    <label
+                                        style="display: block; color: var(--text-muted); font-size: 0.8rem; margin-bottom: 0.3rem;">Template
+                                        Name</label>
+                                    <input type="text" id="tplName"
+                                        style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 0.5rem; border-radius: 6px; width: 100%;">
+                                </div>
+                                <div>
+                                    <label
+                                        style="display: block; color: var(--text-muted); font-size: 0.8rem; margin-bottom: 0.3rem;">Status</label>
+                                    <label
+                                        style="display: flex; align-items: center; cursor: pointer; background: rgba(0,0,0,0.2); padding: 0.4rem 0.8rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2);">
+                                        <input type="checkbox" id="tplActive" style="margin-right: 0.5rem;">
+                                        Set as Active
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; gap: 1rem; flex: 1;">
+                                <div style="flex: 1; display: flex; flex-direction: column;">
+                                    <label
+                                        style="color: #60a5fa; font-size: 0.8rem; margin-bottom: 0.3rem; font-weight: 600;">Chinese
+                                        Content</label>
+                                    <textarea id="tplCn"
+                                        style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 0.5rem; border-radius: 6px; flex: 1; font-family: monospace; resize: none;"></textarea>
+                                </div>
+                                <div style="flex: 1; display: flex; flex-direction: column;">
+                                    <label
+                                        style="color: #f472b6; font-size: 0.8rem; margin-bottom: 0.3rem; font-weight: 600;">English
+                                        Content</label>
+                                    <textarea id="tplEn"
+                                        style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 0.5rem; border-radius: 6px; flex: 1; font-family: monospace; resize: none;"></textarea>
+                                </div>
+                            </div>
+                            <div style="margin-top: 1rem; display: flex; justify-content: flex-end;">
+                                <button class="btn-secondary"
+                                    style="color: #fca5a5; border-color: rgba(239, 68, 68, 0.3); font-size: 0.8rem;"
+                                    onclick="deleteTemplate()">🗑️ Delete This Template</button>
+                            </div>
+                        </div>
+                        <div id="emptyEditor"
+                            style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-muted);">
+                            Select a template to edit
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="dashboard">
             <div class="file-list" id="fileList">
                 <!-- Files will be loaded here -->
@@ -153,31 +238,33 @@
                         style="display: block; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.9rem;">选择模板或自定义消息</label>
                     <select id="templateSelect" onchange="loadTemplate()"
                         style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white; margin-bottom: 1rem;">
-                        <option value="">-- 选择预设模板 --</option>
-                        <option value="full">未接来电标准回复（完整中英文）</option>
-                        <option value="cn">简短回复（仅中文）</option>
-                        <option value="en">简短回复（仅英文）</option>
-                        <option value="custom">自定义消息</option>
+                        <option value="">-- Loading Templates... --</option>
+                        <!-- Dynamic Options will be loaded here -->
                     </select>
                 </div>
 
-                <div style="margin-bottom: 1.5rem;">
-                    <label
-                        style="display: block; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.9rem;">消息内容</label>
-                    <textarea id="manualMessage" rows="15"
-                        style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white; font-family: monospace; resize: vertical;"
-                        placeholder="在此输入或编辑消息内容..."></textarea>
-                    <div style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.8rem;">
-                        💡 提示：请先在Chrome中选择要发送的TextNow对话
-                    </div>
+                <div style="margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                    <label style="color: var(--text-muted); font-size: 0.9rem;">消息内容</label>
+                    <button id="aiReplyBtn" class="btn-secondary"
+                        style="font-size: 0.8rem; padding: 4px 8px; border: 1px solid var(--accent); color: var(--accent);"
+                        onclick="generateAiReply()">
+                        🤖 Generate AI Reply
+                    </button>
                 </div>
-
-                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-                    <button onclick="closeManualSend()" class="btn-secondary">取消</button>
-                    <button onclick="sendManualMessage()" class="btn-primary">发送消息</button>
+                <textarea id="manualMessage" rows="15"
+                    style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white; font-family: monospace; resize: vertical;"
+                    placeholder="在此输入或编辑消息内容..."></textarea>
+                <div style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.8rem;">
+                    💡 提示：请先在Chrome中选择要发送的TextNow对话
                 </div>
             </div>
+
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button onclick="closeManualSend()" class="btn-secondary">取消</button>
+                <button onclick="sendManualMessage()" class="btn-primary">发送消息</button>
+            </div>
         </div>
+    </div>
     </div>
 
     <script>
@@ -261,10 +348,31 @@
                     typeGroups[date].forEach(file => {
                         const item = document.createElement('div');
                         const isActive = file.file_name === selectedFileName && file.source_type === selectedSourceType;
+
+                        let title = file.file_name;
+                        let icon = "";
+                        let metaInfo = file.detected_language;
+
+                        if (file.is_missed_call) {
+                            icon = "📞 ";
+                            const phoneStr = file.phone || "Unknown";
+                            if (file.call_count > 1) {
+                                title = `<span style="color: #f87171;">(${file.call_count})</span> ${phoneStr}`;
+                            } else {
+                                title = `Missed: ${phoneStr}`;
+                            }
+                            metaInfo = `<span style="color: var(--text-muted); font-size: 0.75rem;">Aggregated Missed Calls</span>`;
+                        }
+
                         item.className = `file-item ${file.is_urgent ? 'urgent' : ''} ${file.called_back ? 'done' : ''} ${isActive ? 'active' : ''}`;
                         item.innerHTML = `
-                            <div class="title">${file.file_name}</div>
-                            <div class="meta">${file.detected_language} ${file.is_urgent ? ' • 🚨 Urgent' : ''} ${file.called_back ? ' • ✅ Done' : ''}</div>
+                            <div class="title">${icon}${title}</div>
+                            <div class="meta">
+                                ${metaInfo} 
+                                ${file.is_urgent ? ' • 🚨 Urgent' : ''} 
+                                ${file.called_back ? ' • ✅ Done' : ''}
+                                ${file.replied ? ' • ↩️ Replied' : ''}
+                            </div>
                         `;
                         item.onclick = () => selectFile(file, item);
                         container.appendChild(item);
@@ -289,26 +397,42 @@
                 ${file.is_urgent ? `<div class="urgent-badge">🚨 URGENT: ${file.urgency_reason}</div>` : ''}
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                     <div>
-                        <h2 style="margin-bottom: 0.5rem;">${file.file_name}</h2>
-                        <div class="meta" style="margin-bottom: 1rem;">Source: ${file.source_type} | Language: ${file.detected_language}</div>
-                        
-                        <!-- Callback Status Toggle -->
-                        <div class="status-toggle ${file.called_back ? 'active' : ''}" onclick="toggleCalledBack('${file.file_name}', '${file.source_type}', this, event)">
-                            <input type="checkbox" ${file.called_back ? 'checked' : ''}>
-                            <label>Mark as Called Back</label>
+                        <h2 style="margin-bottom: 0.5rem;">${file.is_missed_call ? '📞 Missed Call' : file.file_name}</h2>
+                        <div class="meta" style="margin-bottom: 1rem;">
+                            ${file.is_missed_call ? `Phone: <span style="color: var(--accent); font-size: 1.1rem; font-weight: 700;">${file.phone || 'Unknown'}</span>` : `Source: ${file.source_type} | Language: ${file.detected_language}`}
                         </div>
+                        
+                        <div style="display:flex; gap: 1rem;">
+                            <!-- Callback Status Toggle -->
+                            <div class="status-toggle ${file.called_back ? 'active' : ''}" onclick="toggleCalledBack('${file.file_name}', '${file.source_type}', this, event)">
+                                <input type="checkbox" ${file.called_back ? 'checked' : ''}>
+                                <label>Mark as Called Back</label>
+                            </div>
+
+                            <!-- Replied Status Toggle -->
+                            <div class="status-toggle ${file.replied ? 'active' : ''}" style="border-color: ${file.replied ? 'var(--accent)' : 'rgba(255,255,255,0.2)'}" onclick="toggleReplied('${file.file_name}', '${file.source_type}', this, event)">
+                                <input type="checkbox" ${file.replied ? 'checked' : ''}>
+                                <label>Mark as Replied</label>
+                            </div>
+                        </div>
+
                     </div>
                     <div class="actions-group" style="display: flex; gap: 0.5rem; flex-direction: column; align-items: flex-end;">
+                         ${!file.is_missed_call ? `
                          <button id="playBtn" class="btn-primary" style="background: var(--success); display: flex; align-items: center; gap: 0.5rem; width: 100%; justify-content: center;" onclick="toggleAudio('/api/audio/${file.source_type}/${encodeURIComponent(file.file_name)}')">
                             <span id="playIcon">▶️</span> Play Audio
-                        </button>
+                        </button>` : `
+                        <div style="background: rgba(248,113,113,0.1); color: #f87171; padding: 0.5rem; border-radius: 8px; font-size: 0.8rem; border: 1px solid rgba(248,113,113,0.2); width: 100%; text-align: center;">
+                            📞 NO VOICEMAIL LEFT
+                        </div>
+                        `}
                         <div style="display: flex; gap: 0.5rem;">
                             <button id="retryBtn" class="btn-secondary" style="font-size: 0.8rem; padding: 0.5rem 1rem;" onclick="reanalyzeFile('${file.file_name}', '${file.source_type}')">🔄 Retry AI</button>
                             <button id="deleteBtn" class="btn-secondary" style="font-size: 0.8rem; padding: 0.5rem 1rem; color: #fca5a5; border-color: rgba(239, 68, 68, 0.3);" onclick="deleteRecord('${file.file_name}', '${file.source_type}')">🗑️ Delete</button>
                         </div>
                         <div style="display: flex; gap: 0.5rem; width: 100%; justify-content: flex-end;">
                             ${file.source_type === 'Video' ? `<button class="btn-secondary" style="font-size: 0.75rem; padding: 0.4rem 0.8rem;" onclick="forceMp4ToMp3('${file.file_name}', '${file.source_type}')">🔄 MP4➡MP3</button>` : ''}
-                            <button class="btn-secondary" style="font-size: 0.75rem; padding: 0.4rem 0.8rem;" onclick="forceAudioToTxt('${file.file_name}', '${file.source_type}')">🔄 Audio➡TXT</button>
+                            ${!file.is_missed_call ? `<button class="btn-secondary" style="font-size: 0.75rem; padding: 0.4rem 0.8rem;" onclick="forceAudioToTxt('${file.file_name}', '${file.source_type}')">🔄 Audio➡TXT</button>` : ''}
                         </div>
                     </div>
                 </div>
@@ -634,8 +758,93 @@
             };
         }
 
+        // Templates Logic
+        let allTemplates = {};
+
+        async function fetchTemplates() {
+            try {
+                const resp = await fetch('/api/templates');
+                allTemplates = await resp.json();
+
+                const select = document.getElementById('templateSelect');
+                select.innerHTML = '<option value="">-- Select Template --</option>';
+
+                // Sort active first?
+                Object.keys(allTemplates).forEach(key => {
+                    const t = allTemplates[key];
+                    const opt = document.createElement('option');
+                    opt.value = key;
+                    const activeMark = t.active ? '[ACTIVE] ' : '';
+                    opt.innerText = `${activeMark}${t.name || key}`;
+                    select.appendChild(opt);
+                });
+
+            } catch (e) {
+                console.error("Failed to load templates", e);
+            }
+        }
+
+        function loadTemplate() {
+            const select = document.getElementById('templateSelect');
+            const key = select.value;
+            const textarea = document.getElementById('manualMessage');
+
+            if (!key || !allTemplates[key]) {
+                return;
+            }
+
+            const t = allTemplates[key];
+            const content = `${t.content_cn || ''}\n\n${t.content_en || ''}`;
+            textarea.value = content.trim();
+        }
+
+        async function generateAiReply() {
+            const btn = document.getElementById('aiReplyBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '🤖 Thinking...';
+            btn.disabled = true;
+
+            const textarea = document.getElementById('manualMessage');
+
+            try {
+                const select = document.getElementById('templateSelect');
+                const key = select.value;
+                let templateContent = "";
+
+                if (key && allTemplates[key]) {
+                    const t = allTemplates[key];
+                    templateContent = `${t.content_cn || ''}\n\n${t.content_en || ''}`;
+                } else {
+                    templateContent = textarea.value; // Use current text as base
+                }
+
+                const resp = await fetch('/api/generate-reply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        history_text: "User: Missed call.",
+                        template_content: templateContent
+                    })
+                });
+
+                const data = await resp.json();
+                if (data.reply) {
+                    textarea.value = data.reply;
+                } else {
+                    alert("AI returned no reply.");
+                }
+
+            } catch (e) {
+                alert("AI Error: " + e);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
         // Initial load
         fetchConfig();
+        fetchTemplates();
         fetchFiles();
 
         async function openSettings() {
@@ -895,10 +1104,250 @@ or call 011 86 21 2069 5530
 Thank you!`
         };
 
-        function openManualSend() {
+        async function loadTemplatesForDropdown() {
+            try {
+                // Determine if we need to fetch first? globalTemplates might be empty if we haven't opened the editor.
+                if (Object.keys(globalTemplates).length === 0) {
+                    const resp = await fetch('/api/templates');
+                    globalTemplates = await resp.json();
+                }
+
+                const select = document.getElementById('templateSelect');
+                select.innerHTML = '<option value="">-- Select Template --</option>';
+
+                Object.keys(globalTemplates).forEach(key => {
+                    const tpl = globalTemplates[key];
+                    const opt = document.createElement('option');
+                    opt.value = key;
+                    opt.innerText = tpl.name + (tpl.active ? ' (Active)' : '');
+                    select.appendChild(opt);
+                });
+
+                const customOpt = document.createElement('option');
+                customOpt.value = 'custom';
+                customOpt.innerText = 'Custom Message';
+                select.appendChild(customOpt);
+
+            } catch (e) {
+                console.error("Failed to load templates for dropdown", e);
+            }
+        }
+
+        async function openManualSend() {
             document.getElementById('manualSendModal').style.display = 'flex';
-            document.getElementById('templateSelect').value = '';
-            document.getElementById('manualMessage').value = '';
+
+            // Reload templates for dropdown every time we open to be fresh
+            await loadTemplatesForDropdown();
+
+            // document.getElementById('templateSelect').value = ''; // Keep default or reset?
+            // If we have an active template, maybe select it by default?
+            const activeKey = Object.keys(globalTemplates).find(k => globalTemplates[k].active);
+            if (activeKey) {
+                document.getElementById('templateSelect').value = activeKey;
+                // But wait, if we auto-filled from AI suggestion, we shouldn't overwrite it immediately unless user expects it.
+                // The logic below checks for suggestion.
+            }
+
+            // Auto-fill with AI suggestion from selected file if available
+            const textarea = document.getElementById('manualMessage');
+            // textarea.value = ''; // Don't reset if we want to default to active template? 
+            // Better policy: Try AI suggestion first. If none, try active template.
+
+            let autoFilled = false;
+
+            if (selectedFileName && selectedSourceType) {
+                const file = currentFiles.find(f => f.file_name === selectedFileName && f.source_type === selectedSourceType);
+                if (file && file.suggested_reply) {
+                    textarea.value = file.suggested_reply;
+                    autoFilled = true;
+                    // document.getElementById('templateSelect').value = 'custom'; // Logic?
+                }
+            }
+
+            if (!autoFilled && activeKey) {
+                loadTemplate(); // Load content of active template
+            }
+            if (!autoFilled && !activeKey) {
+                textarea.value = '';
+            }
+        }
+
+        async function toggleReplied(file_name, source_type, container, event) {
+            const checkbox = container.querySelector('input');
+            if (event.target !== checkbox) checkbox.checked = !checkbox.checked;
+            const newStatus = checkbox.checked;
+
+            try {
+                const resp = await fetch('/api/replied', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file_name, source_type, status: newStatus })
+                });
+
+                if (resp.ok) {
+                    if (newStatus) container.classList.add('active');
+                    else container.classList.remove('active');
+
+                    // Update local data
+                    const file = currentFiles.find(f => f.file_name === file_name && f.source_type === source_type);
+                    if (file) {
+                        file.replied = newStatus;
+                        renderFileList();
+                    }
+                } else {
+                    checkbox.checked = !newStatus; // Rollback
+                    alert('Failed to update status');
+                }
+            } catch (e) {
+                checkbox.checked = !newStatus; // Rollback
+                alert('Request failed: ' + e);
+            }
+        }
+
+
+        // --- Template Editor Logic ---
+        let globalTemplates = {};
+        let currentEditingId = null;
+
+        async function openTemplates() {
+            document.getElementById('templatesModal').style.display = 'flex';
+            await loadTemplatesEditor();
+        }
+
+        async function loadTemplatesEditor() {
+            try {
+                const resp = await fetch('/api/templates');
+                globalTemplates = await resp.json();
+                renderTemplateList();
+            } catch (e) {
+                alert('Failed to load templates: ' + e);
+            }
+        }
+
+        function renderTemplateList() {
+            const list = document.getElementById('templateList');
+            list.innerHTML = '';
+
+            Object.keys(globalTemplates).forEach(key => {
+                const tpl = globalTemplates[key];
+                const div = document.createElement('div');
+                const isActive = key === currentEditingId;
+
+                div.style.cssText = `
+                    padding: 0.8rem; 
+                    border-radius: 8px; 
+                    background: ${isActive ? 'rgba(255,255,255,0.1)' : 'transparent'}; 
+                    border: 1px solid ${isActive ? 'rgba(255,255,255,0.3)' : 'transparent'}; 
+                    cursor: pointer;
+                    transition: all 0.2s;
+                `;
+                div.innerHTML = `
+                    <div style="font-weight: 600; color: white;">
+                        ${tpl.name}
+                        ${tpl.active ? '<span style="font-size: 0.7rem; background: var(--success); padding: 2px 6px; border-radius: 4px; margin-left: 5px;">ACTIVE</span>' : ''}
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">ID: ${key}</div>
+                `;
+                div.onclick = () => selectTemplateToEdit(key);
+                div.onmouseover = () => { if (!isActive) div.style.background = 'rgba(255,255,255,0.05)'; };
+                div.onmouseout = () => { if (!isActive) div.style.background = 'transparent'; };
+
+                list.appendChild(div);
+            });
+        }
+
+        function selectTemplateToEdit(key) {
+            currentEditingId = key;
+            const tpl = globalTemplates[key];
+
+            document.getElementById('emptyEditor').style.display = 'none';
+            document.getElementById('editorContainer').style.display = 'flex';
+            document.getElementById('editorContainer').style.flexDirection = 'column';
+            document.getElementById('editorContainer').style.height = '100%';
+
+            document.getElementById('tplName').value = tpl.name || '';
+            document.getElementById('tplActive').checked = tpl.active || false;
+            document.getElementById('tplCn').value = tpl.content_cn || '';
+            document.getElementById('tplEn').value = tpl.content_en || '';
+
+            renderTemplateList(); // Re-render to highlight selection
+        }
+
+        function addNewTemplate() {
+            const newId = 'custom_' + Date.now();
+            globalTemplates[newId] = {
+                name: 'New Template ' + new Date().toLocaleTimeString(),
+                content_cn: '',
+                content_en: '',
+                active: false
+            };
+            renderTemplateList();
+            selectTemplateToEdit(newId);
+        }
+
+        async function saveTemplates() {
+            if (!currentEditingId) return;
+
+            // Update current memory object from inputs
+            globalTemplates[currentEditingId].name = document.getElementById('tplName').value;
+            globalTemplates[currentEditingId].content_cn = document.getElementById('tplCn').value;
+            globalTemplates[currentEditingId].content_en = document.getElementById('tplEn').value;
+
+            const isActive = document.getElementById('tplActive').checked;
+
+            // Logic: If setting to active, must unset others. 
+            // If setting to inactive, caution? (At least one should be active usually, but maybe not enforced rigidly)
+            if (isActive) {
+                Object.keys(globalTemplates).forEach(k => {
+                    globalTemplates[k].active = (k === currentEditingId);
+                });
+            } else {
+                globalTemplates[currentEditingId].active = false;
+            }
+
+            try {
+                const resp = await fetch('/api/templates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ templates: globalTemplates })
+                });
+
+                if (resp.ok) {
+                    alert('Templates saved successfully!');
+                    renderTemplateList(); // Refresh list to show new active status
+                } else {
+                    alert('Failed to save templates');
+                }
+            } catch (e) {
+                alert('Error saving: ' + e);
+            }
+        }
+
+        async function deleteTemplate() {
+            if (!currentEditingId) return;
+            if (!confirm('Are you sure you want to delete this template?')) return;
+
+            delete globalTemplates[currentEditingId];
+
+            try {
+                const resp = await fetch('/api/templates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ templates: globalTemplates })
+                });
+
+                if (resp.ok) {
+                    currentEditingId = null;
+                    document.getElementById('editorContainer').style.display = 'none';
+                    document.getElementById('emptyEditor').style.display = 'flex';
+                    renderTemplateList();
+                    alert('Template deleted.');
+                } else {
+                    alert('Failed to delete template on server.');
+                }
+            } catch (e) {
+                alert('Error deleting: ' + e);
+            }
         }
 
         function closeManualSend() {
@@ -908,10 +1357,19 @@ Thank you!`
         function loadTemplate() {
             const select = document.getElementById('templateSelect');
             const textarea = document.getElementById('manualMessage');
+            const selectedId = select.value;
 
-            if (select.value && select.value !== 'custom') {
-                textarea.value = SMS_TEMPLATES[select.value];
-            } else if (select.value === 'custom') {
+            if (selectedId && selectedId !== 'custom') {
+                if (globalTemplates[selectedId]) {
+                    // Concatenate CN and EN content for manual send
+                    const tpl = globalTemplates[selectedId];
+                    const content = (tpl.content_cn || '') + '\n\n' + (tpl.content_en || '');
+                    textarea.value = content.trim();
+                } else if (SMS_TEMPLATES[selectedId]) {
+                    // Fallback for hardcoded if valid
+                    textarea.value = SMS_TEMPLATES[selectedId];
+                }
+            } else if (selectedId === 'custom') {
                 textarea.value = '';
                 textarea.focus();
             }
@@ -941,11 +1399,76 @@ Thank you!`
                 if (resp.ok && result.success) {
                     alert('✅ 消息发送成功！');
                     closeManualSend();
+
+                    if (selectedFileName && selectedSourceType) {
+                        fetch('/api/replied', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ file_name: selectedFileName, source_type: selectedSourceType, status: true })
+                        }).then(() => {
+                            const file = currentFiles.find(f => f.file_name === selectedFileName && f.source_type === selectedSourceType);
+                            if (file) {
+                                file.replied = true;
+                                renderFileList();
+                                const item = document.querySelector('.file-item.active');
+                                selectFile(file, item);
+                            }
+                        });
+                    }
+
                 } else {
                     alert('❌ 发送失败: ' + (result.error || '未知错误'));
                 }
             } catch (e) {
                 alert('❌ 请求失败: ' + e.message);
+            }
+        }
+
+        async function generateAiReply() {
+            if (!selectedFileName || !selectedSourceType) {
+                alert("Please select a file from the list first.");
+                return;
+            }
+
+            const file = currentFiles.find(f => f.file_name === selectedFileName && f.source_type === selectedSourceType);
+            if (!file) return;
+
+            const textarea = document.getElementById('manualMessage');
+            textarea.value = "🤖 Generating AI reply... please wait.";
+
+            // Get selected template content
+            let templateContent = "";
+            const select = document.getElementById('templateSelect');
+            if (select.value && SMS_TEMPLATES[select.value]) {
+                templateContent = SMS_TEMPLATES[select.value];
+            } else if (select.value === 'custom') {
+                // If custom, maybe use what's in the box? But we just overwrote it.
+                // Actually, let's use the active template from globalTemplates if available?
+                // For now, empty string implies default logic.
+            }
+
+            // Use transcription preview as history proxy if available, or summary
+            // Ideally we should fetch the full history, but for now this is a good approximation
+            const historyText = (file.transcription_preview || "") + "\n\n" + (file.analysis ? JSON.stringify(file.analysis) : "");
+
+            try {
+                const resp = await fetch('/api/generate-reply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        history_text: historyText,
+                        template_content: templateContent
+                    })
+                });
+
+                const data = await resp.json();
+                if (data.reply) {
+                    textarea.value = data.reply;
+                } else {
+                    textarea.value = "Error: No reply generated.";
+                }
+            } catch (e) {
+                textarea.value = "Error generating reply: " + e;
             }
         }
     </script>

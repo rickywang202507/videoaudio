@@ -14,7 +14,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 # Configuration
-def get_randomized_message():
+def get_randomized_message(templates=None):
     """Generates a unique message to avoid spam filters."""
     
     # 1. Random Greetings
@@ -24,50 +24,38 @@ def get_randomized_message():
     g_cn = random.choice(cn_greetings)
     g_en = random.choice(en_greetings)
     
+    
+    # Defaults if file missing
+    raw_cn = "尊敬的旅客您好，很抱歉未能接听您的来电..."
+    raw_en = "Sorry we missed your call..."
+    
+    # Try to load formatted templates from file or argument
+    if templates:
+        # Sort of a crude way: iterate keys and find "active": true
+        # Default to standard_reply if none active found
+        selected_key = "standard_reply"
+        for key, tmpl in templates.items():
+            if tmpl.get("active", False) == True:
+                selected_key = key
+                break
+        
+        target = templates.get(selected_key, {})
+        raw_cn = target.get("content_cn", raw_cn)
+        raw_en = target.get("content_en", raw_en)
+    
     # 2. Random Ref ID (3 chars)
     ref_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
     timestamp = datetime.now().strftime("%H%M")
     
     msg = f"""{g_cn}，
-很抱歉未能接听您的来电，请参考以下信息：
-购票：请访问东航官网 www.ceair.com，或联系您的代理人 / 第三方网站。
-退改票：
-– 如在东航官网购票，请发送邮件至 MUYVR@chinaeastern.ca
-– 其他渠道购票，请联系原购票渠道。
-中转服务：
-https://www.ceair.com/self-service/service-submit/transferService
-特殊服务申请：
-– 温哥华始发：MUYVR@chinaeastern.ca
-– 多伦多始发：MUyyzSales@chinaeastern.ca
-改名服务：请致电 011 86 21 2069 5530
-其他事项：请发送邮件至 MUyyzSales@chinaeastern.ca or call 011 86 21 2069 5530
+{raw_cn}
 
 免责声明：本短信为系统自动回复。
 [Ref: {ref_id}-{timestamp}]
 
 {g_en},
-Sorry we missed your call. Please refer to the information below.
+{raw_en}
 
-For ticket purchase, please visit China Eastern official website www.ceair.com, or contact your agent / third-party website.
-
-For refund or change:
-– If ticket purchased on China Eastern website, please email MUYVR@chinaeastern.ca
-
-– Otherwise, please contact original purchase channel.
-
-Transfer service:
-https://www.ceair.com/self-service/service-submit/transferService
-
-Special service request:
-– Vancouver departure: MUYVR@chinaeastern.ca
-
-– Toronto departure: MUyyzSales@chinaeastern.ca
-
-Name change: please call 011 86 21 2069 5530
-
-Other inquiries: please email MUyyzSales@chinaeastern.ca or call 011 86 21 2069 5530
-
-Disclaimer: This is an auto-reply message. Do not reply.
 [Ref: {ref_id}]"""
     return msg
 
@@ -93,11 +81,31 @@ class Logger(object):
 sys.stdout = Logger()
 sys.stderr = sys.stdout
 
+from ai_service import AIService
+
 class TextNowBot:
-    def __init__(self, download_dir, download_all_voicemails=False):
+    def __init__(self, download_dir, download_all_voicemails=False, enable_reply=True, config=None):
         print(f"--- Session Started at {datetime.now()} ---")
         self.download_dir = download_dir
         self.download_all_voicemails = download_all_voicemails
+        self.enable_reply = enable_reply
+        
+        self.templates = {}
+        try:
+            with open("templates.json", "r", encoding="utf-8") as f:
+                self.templates = json.load(f)
+            print("[Templates] Loaded custom templates from templates.json")
+        except Exception as e:
+            print(f"[Templates] Could not load templates.json: {e}")
+        
+        self.ai = None
+        if config:
+            try:
+                self.ai = AIService(config)
+                print("[AI] AI Service Initialized for message variations.")
+            except Exception as e:
+                print(f"[AI] Failed to init AI Service: {e}")
+
         if not os.path.exists(download_dir):
             os.makedirs(download_dir)
         
@@ -141,55 +149,94 @@ class TextNowBot:
         # We'll just detach.
         pass
 
+    def create_synthetic_missed_call(self, phone_number, missed_count=1):
+        """Creates a text file record for missed calls (no voicemail)."""
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        filename = f"{date_str}_{phone_number}_missed.txt"
+        filepath = os.path.join(self.download_dir, filename)
+        
+        # We overwrite even if exists to update count
+        try:
+            with open(filepath, "w", encoding="utf-8") as f:
+                f.write(f"Missed Calls: {missed_count}\n")
+                f.write(f"Last Missed: {datetime.now().strftime('%H:%M:%S')}")
+            print(f"    [Synthetic] Created missed call record: {filename} (Count: {missed_count})")
+            
+            # If we updated the count, we should force re-processing by deleting the old JSON if it exists
+            # This logic assumes the dashboard views the JSON.
+            # We don't know the exact path of the JSON easily here (it's in WAV_TXT_DIR usually?), 
+            # BUT audio_processor.py handles that. 
+            # Ideally we just create the .txt and let audio_processor scan it.
+            return True
+        except Exception as e:
+            print(f"    [Error] Failed to create synthetic record: {e}")
+            return False
+
     def download_voicemails(self, phone_number):
-        """Finds and downloads voicemail audio files in the current conversation view."""
+        """Finds and downloads voicemail audio files in the current conversation view.
+           Returns: tuple (download_count, missed_call_count)
+        """
         print(f"    [Action] Scanning for voicemails from {phone_number}...")
         try:
             # 1. Find all audio elements
             audios = self.driver.find_elements(By.TAG_NAME, "audio")
-            if not audios:
-                print("    [Info] No audio elements found in conversation.")
-                return 0
-
             download_count = 0
-            # Use today's date for filename if we can't get it from UI easily
-            date_str = datetime.now().strftime("%Y-%m-%d")
             
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            }
+            if audios:
+                # Use today's date for filename if we can't get it from UI easily
+                date_str = datetime.now().strftime("%Y-%m-%d")
+                
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                }
 
-            for idx, au in enumerate(audios):
-                try:
-                    src = au.get_attribute("src")
-                    if not src or "voicemail-media.textnow.com" not in src:
-                        # Skip system sounds or other audio
-                        continue
-                    
-                    # Create unique filename
-                    filename = f"{date_str}_{phone_number}_{idx+1}.wav"
-                    filepath = os.path.join(self.download_dir, filename)
-                    
-                    if os.path.exists(filepath):
-                        # print(f"    [Skip] Voicemail already exists: {filename}")
-                        continue
-                    
-                    print(f"    [Download] Fetching: {filename}...")
-                    
-                    # Direct download via requests (works because token is in URL)
-                    resp = requests.get(src, headers=headers, timeout=15)
-                    if resp.status_code == 200:
-                        with open(filepath, "wb") as f:
-                            f.write(resp.content)
-                        print(f"    [Success] Saved voicemail: {filename} ({len(resp.content)} bytes)")
-                        download_count += 1
-                    else:
-                        print(f"    [Error] Download failed for {filename} (Status: {resp.status_code})")
-                except Exception as ex:
-                    print(f"    [Error] Problem with specific audio element: {ex}")
+                for idx, au in enumerate(audios):
+                    try:
+                        src = au.get_attribute("src")
+                        if not src or "voicemail-media.textnow.com" not in src:
+                            # Skip system sounds or other audio
+                            continue
+                        
+                        # Create unique filename
+                        filename = f"{date_str}_{phone_number}_{idx+1}.wav"
+                        filepath = os.path.join(self.download_dir, filename)
+                        
+                        if os.path.exists(filepath):
+                            # print(f"    [Skip] Voicemail already exists: {filename}")
+                            continue
+                        
+                        print(f"    [Download] Fetching: {filename}...")
+                        
+                        # Direct download via requests (works because token is in URL)
+                        resp = requests.get(src, headers=headers, timeout=15)
+                        if resp.status_code == 200:
+                            with open(filepath, "wb") as f:
+                                f.write(resp.content)
+                            print(f"    [Success] Saved voicemail: {filename} ({len(resp.content)} bytes)")
+                            download_count += 1
+                        else:
+                            print(f"    [Error] Download failed for {filename} (Status: {resp.status_code})")
+                    except Exception as ex:
+                        print(f"    [Error] Problem with specific audio element: {ex}")
             
-            return download_count
-            return 0
+            # 2. If no audios downloaded, check for "Missed call" text bubbles
+            missed_call_count = 0
+            if download_count == 0:
+                try:
+                    # Look for bubbles containing "Missed call"
+                    # Count them. We might want to limit to 'recent' ones but counting distinct elements is a good start.
+                    missed_els = self.driver.find_elements(By.XPATH, "//div[contains(text(), 'Missed call')]")
+                    missed_call_count = len(missed_els)
+                    if missed_call_count > 0:
+                        print(f"    [Info] No audio found, but found {missed_call_count} 'Missed call' events.")
+                except:
+                    pass
+
+            return download_count, missed_call_count
+            
+        except Exception as e:
+             print(f"    [Error] download_voicemails failed: {e}")
+             return 0, 0
         except Exception as e:
             print(f"    [Error] in download_voicemails: {e}")
             return 0
@@ -507,6 +554,13 @@ class TextNowBot:
                             clean_hist = history_text.replace('\n', ' ')[:100]
                             # print(f"    [Debug] History snippet: {clean_hist}...")
                             
+                            # --- Check for VoiceMails or Missed Calls ---
+                            # We check this EARLY so we capture voicemails even if we skip reply later.
+                            downloaded, missed_count = self.download_voicemails(phone_number)
+                            if downloaded == 0 and missed_count > 0:
+                                self.create_synthetic_missed_call(phone_number, missed_count)
+                            # --------------------------------------------
+                            
                             # More flexible matching
                             has_en_keyword = "missed your call" in history_text or "Missed your call" in history_text
                             has_cn_keyword = "自动回复" in history_text or "China Eastern" in history_text or "china eastern" in history_text
@@ -576,7 +630,26 @@ class TextNowBot:
                                         time.sleep(0.5)
                                         
                                         # Generate UNIQUE randomized message
-                                        dynamic_message = get_randomized_message()
+                                        base_message = get_randomized_message(self.templates)
+                                        dynamic_message = base_message
+                                        
+                                        # Apply AI Generation if available
+                                        ai_reply = None
+                                        if self.ai:
+                                            # Try to generate context-aware (language-aware) reply first
+                                            if history_text and len(history_text) > 10:
+                                                print("    [AI] Analyzing history for language-aware reply...")
+                                                ai_reply = self.ai.generate_reply_from_history(history_text, template_text=base_message)
+                                            
+                                            # If history analysis failed or returned None, fallback to Paraphrasing standard template
+                                            if not ai_reply:
+                                                print("    [AI] generating unique variation of standard template...")
+                                                ai_reply = self.ai.paraphrase_content(base_message)
+                                        
+                                        if ai_reply:
+                                            dynamic_message = ai_reply
+                                        else:
+                                            dynamic_message = base_message
                                         
                                         self.driver.execute_script("""
                                             var text = arguments[0];
@@ -618,7 +691,7 @@ class TextNowBot:
                     # 5. Voicemail Download - Re-enabled
                     # Always try to download audio if it's a voicemail/missed call,
                     # even if it's read (if download_all_voicemails is True).
-                    self.download_voicemails(phone_number)
+                    # MOVED UP
                     
                 except Exception as e:
                     print(f"  [Error] processing item {i}: {e}")
@@ -663,7 +736,7 @@ if __name__ == "__main__":
             audio_dir = cfg.get("WAV_DIR", audio_dir)
     
     # Initialize bot
-    bot = TextNowBot(audio_dir, download_all_voicemails=False, enable_reply=enable_reply)
+    bot = TextNowBot(audio_dir, download_all_voicemails=False, enable_reply=enable_reply, config=cfg)
     
     print("--- 启动 TextNow 自动扫描监控 ---")
     print("按 Ctrl+C 停止程序")

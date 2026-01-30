@@ -1,0 +1,14 @@
+{
+    "standard_reply": {
+        "name": "Standard Auto Reply",
+        "active": true,
+        "content_cn": "很抱歉未能接听您的来电，请参考以下信息：\n购票：请访问东航官网 www.ceair.com，或联系您的代理人 / 第三方网站。\n退改票：\n– 如在东航官网购票，请发送邮件至 MUYVR@chinaeastern.ca\n– 其他渠道购票，请联系原购票渠道。\n中转服务：\nhttps://www.ceair.com/self-service/service-submit/transferService\n特殊服务申请：\n– 温哥华始发：MUYVR@chinaeastern.ca\n– 多伦多始发：MUyyzSales@chinaeastern.ca\n改名服务：请致电 011 86 21 2069 5530\n其他事项：请发送邮件至 MUyyzSales@chinaeastern.ca or call 011 86 21 2069 5530\n\n免责声明：本短信为系统自动回复。",
+        "content_en": "Sorry we missed your call. Please refer to the information below.\n\nFor ticket purchase, please visit China Eastern official website www.ceair.com, or contact your agent / third-party website.\n\nFor refund or change:\n– If ticket purchased on China Eastern website, please email MUYVR@chinaeastern.ca\n\n– Otherwise, please contact original purchase channel.\n\nTransfer service:\nhttps://www.ceair.com/self-service/service-submit/transferService\n\nSpecial service request:\n– Vancouver departure: MUYVR@chinaeastern.ca\n\n– Toronto departure: MUyyzSales@chinaeastern.ca\n\nName change: please call 011 86 21 2069 5530\n\nOther inquiries: please email MUyyzSales@chinaeastern.ca or call 011 86 21 2069 5530\n\nDisclaimer: This is an auto-reply message. Do not reply."
+    },
+    "short_reply": {
+        "name": "Short Reply (Weekend)",
+        "active": false,
+        "content_cn": "很抱歉未能接听您的来电。周末时间我们仅处理紧急事务。\n如需购票或改期，请访问 www.ceair.com。\n紧急情况请发邮件至 MUyyzSales@chinaeastern.ca。",
+        "content_en": "Sorry we missed your call. It is currently the weekend.\nFor urgent matters, please email MUyyzSales@chinaeastern.ca.\nFor tickets, please visit www.ceair.com."
+    }
+}
