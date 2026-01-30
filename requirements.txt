@@ -1,0 +1,10 @@
+moviepy
+openai-whisper
+setuptools
+fastapi
+uvicorn
+openai
+pydantic
+requests
+python-multipart
+selenium

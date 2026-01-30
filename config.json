@@ -1,0 +1,30 @@
+{
+    "VIDEO_DIR": "C:\\Antigravity\\VideoAudioConvert\\data\\Video",
+    "AUDIO_DIR": "C:\\Antigravity\\VideoAudioConvert\\data\\Audio",
+    "TXT_DIR": "C:\\Antigravity\\VideoAudioConvert\\data\\TXT",
+    "WAV_DIR": "C:\\Antigravity\\VideoAudioConvert\\data\\PhoneReCO",
+    "WAV_TXT_DIR": "C:\\Antigravity\\VideoAudioConvert\\data\\PhoneTXT",
+    "ACTIVE_AI": "Groq",
+    "AI_PROVIDERS": {
+        "OpenAI": {
+            "api_key": "YOUR_OPENAI_KEY",
+            "base_url": "https://api.openai.com/v1",
+            "model": "gpt-3.5-turbo"
+        },
+        "Cohere": {
+            "api_key": "YOUR_COHERE_KEY",
+            "base_url": "https://api.cohere.ai/compatibility/v1",
+            "model": "command-r"
+        },
+        "Groq": {
+            "api_key": "YOUR_GROQ_KEY",
+            "base_url": "https://api.groq.com/openai/v1",
+            "model": "llama-3.3-70b-versatile"
+        },
+        "Custom": {
+            "api_key": "YOUR_KEY",
+            "base_url": "https://api.example.com/v1",
+            "model": "custom-model"
+        }
+    }
+}

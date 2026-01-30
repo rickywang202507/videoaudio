@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MU Call Processor AI</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <h1>MU CALL PROCESSOR <span
+                        style="font-weight: 400; font-size: 0.9rem; margin-left: 10px; opacity: 0.7;">AI ENHANCED
+                        v2.0</span></h1>
+            </div>
+            <div class="actions" style="display: flex; align-items: center;">
+                <button id="settingsBtn" class="btn-secondary" style="margin-right: 1rem;" onclick="openSettings()">⚙️
+                    Settings</button>
+                <select id="aiSelect" class="btn-secondary"
+                    style="background: rgba(45, 55, 72, 0.9); color: white; border: 1px solid rgba(255, 255, 255, 0.2); padding: 0.75rem 1rem; border-radius: 12px; margin-right: 1.5rem; cursor: pointer; min-width: 150px; font-weight: 600; appearance: auto;">
+                    <!-- Options will be populated -->
+                </select>
+
+                <div style="display: flex; align-items: center; margin-right: 1rem;">
+                    <input type="checkbox" id="replyToggle" checked style="margin-right: 5px;">
+                    <label for="replyToggle"
+                        style="color: white; font-size: 0.9rem; font-weight: 600; cursor: pointer;">Enable
+                        Auto-Reply</label>
+                </div>
+
+                <button id="textNowBtn" class="btn-secondary" style="margin-right: 1rem;" onclick="syncTextNow()">💬
+                    Sync TextNow</button>
+                <button id="historyBtn" class="btn-secondary" style="margin-right: 1rem;"
+                    onclick="openReplyHistory()">📜
+                    History</button>
+                <button id="manualSendBtn" class="btn-secondary" style="margin-right: 1rem;"
+                    onclick="openManualSend()">✉️
+                    Manual Send</button>
+                <button id="processBtn" class="btn-primary">Scan & Process Files</button>
+            </div>
+        </header>
+
+        <!-- Settings Modal -->
+        <div id="settingsModal"
+            style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center;">
+            <div
+                style="background: var(--bg-card); padding: 2rem; border-radius: 20px; width: 600px; max-width: 90%; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(16px);">
+                <h2 style="margin-bottom: 1.5rem;">Configuration</h2>
+
+                <div style="margin-bottom: 1rem;">
+                    <label
+                        style="display: block; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.8rem;">Video
+                        Source Directory (MP4)</label>
+                    <input type="text" id="confVideoDir"
+                        style="width: 100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label
+                        style="display: block; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.8rem;">Video
+                        Audio Output (MP3)</label>
+                    <input type="text" id="confAudioDir"
+                        style="width: 100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label
+                        style="display: block; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.8rem;">Video
+                        Transcript Output (TXT/JSON)</label>
+                    <input type="text" id="confTxtDir"
+                        style="width: 100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                </div>
+                <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 1.5rem 0;">
+                <div style="margin-bottom: 1rem;">
+                    <label
+                        style="display: block; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.8rem;">Phone
+                        Source Directory (WAV)</label>
+                    <input type="text" id="confWavDir"
+                        style="width: 100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                </div>
+                <div style="margin-bottom: 1.5rem;">
+                    <label
+                        style="display: block; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.8rem;">Phone
+                        Transcript Output (TXT/JSON)</label>
+                    <input type="text" id="confWavTxtDir"
+                        style="width: 100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+                    <button class="btn-secondary"
+                        onclick="document.getElementById('settingsModal').style.display='none'">Cancel</button>
+                    <button class="btn-primary" onclick="saveSettings()">Save Configuration</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard">
+            <div class="file-list" id="fileList">
+                <!-- Files will be loaded here -->
+            </div>
+
+            <div class="content-area" id="contentArea">
+                <div
+                    style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-muted);">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"
+                        stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 1rem; opacity: 0.2;">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    <p>Select a file to view details</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reply History Modal -->
+        <div id="replyHistoryModal"
+            style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center;">
+            <div
+                style="background: var(--bg-card); padding: 2rem; border-radius: 20px; width: 600px; max-width: 90%; max-height: 80vh; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(16px);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h2 style="margin: 0;">📜 Recent Auto-Replies</h2>
+                    <button onclick="closeReplyHistory()" class="btn-secondary"
+                        style="padding: 0.2rem 0.6rem;">✕</button>
+                </div>
+
+                <div id="historyList" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <!-- Items will be loaded here -->
+                    <div style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading history...</div>
+                </div>
+
+                <div style="margin-top: 1.5rem; text-align: right;">
+                    <button onclick="closeReplyHistory()" class="btn-primary">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manual Send Modal -->
+        <div id="manualSendModal"
+            style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center;">
+            <div
+                style="background: var(--bg-card); padding: 2rem; border-radius: 20px; width: 700px; max-width: 90%; max-height: 80vh; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(16px);">
+                <h2 style="margin-bottom: 1.5rem;">📱 Manual Send to TextNow</h2>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label
+                        style="display: block; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.9rem;">选择模板或自定义消息</label>
+                    <select id="templateSelect" onchange="loadTemplate()"
+                        style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white; margin-bottom: 1rem;">
+                        <option value="">-- 选择预设模板 --</option>
+                        <option value="full">未接来电标准回复（完整中英文）</option>
+                        <option value="cn">简短回复（仅中文）</option>
+                        <option value="en">简短回复（仅英文）</option>
+                        <option value="custom">自定义消息</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label
+                        style="display: block; margin-bottom: 0.5rem; color: var(--text-muted); font-size: 0.9rem;">消息内容</label>
+                    <textarea id="manualMessage" rows="15"
+                        style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white; font-family: monospace; resize: vertical;"
+                        placeholder="在此输入或编辑消息内容..."></textarea>
+                    <div style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.8rem;">
+                        💡 提示：请先在Chrome中选择要发送的TextNow对话
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button onclick="closeManualSend()" class="btn-secondary">取消</button>
+                    <button onclick="sendManualMessage()" class="btn-primary">发送消息</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentFiles = [];
+
+        async function fetchConfig() {
+            const resp = await fetch('/api/config');
+            const config = await resp.json();
+            const select = document.getElementById('aiSelect');
+            select.innerHTML = '';
+
+            Object.keys(config.AI_PROVIDERS).forEach(provider => {
+                const opt = document.createElement('option');
+                opt.value = provider;
+                opt.innerText = `AI: ${provider}`;
+                if (provider === config.ACTIVE_AI) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        document.getElementById('aiSelect').onchange = async (e) => {
+            const active_ai = e.target.value;
+            await fetch('/api/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ active_ai })
+            });
+            console.log('AI Provider updated to:', active_ai);
+        };
+
+        async function fetchFiles() {
+            const resp = await fetch('/api/files');
+            currentFiles = await resp.json();
+            renderFileList();
+        }
+
+        let selectedFileName = null;
+        let selectedSourceType = null;
+
+        function renderFileList() {
+            const list = document.getElementById('fileList');
+            list.innerHTML = `
+                <h3 style="margin: 0 0 0.5rem 0.5rem; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase;">📱 Phone Calls</h3>
+                <div id="phoneList"></div>
+                <h3 style="margin: 1.5rem 0 0.5rem 0.5rem; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase;">🎥 Video Recordings</h3>
+                <div id="videoList"></div>
+            `;
+
+            const phoneList = document.getElementById('phoneList');
+            const videoList = document.getElementById('videoList');
+
+            // Group by Source -> Date
+            const groups = { Phone: {}, Video: {} };
+
+            // Sort files: Urgency first, then timestamp descending
+            currentFiles.sort((a, b) => {
+                if (!!b.is_urgent !== !!a.is_urgent) return (b.is_urgent ? 1 : 0) - (a.is_urgent ? 1 : 0);
+                return (b.timestamp || 0) - (a.timestamp || 0);
+            });
+
+            currentFiles.forEach(file => {
+                const date = file.file_date || 'Unknown Date';
+                if (!groups[file.source_type]) groups[file.source_type] = {};
+                if (!groups[file.source_type][date]) groups[file.source_type][date] = [];
+                groups[file.source_type][date].push(file);
+            });
+
+            const renderGroup = (container, typeGroups) => {
+                const dates = Object.keys(typeGroups).sort().reverse();
+                if (dates.length === 0) {
+                    container.innerHTML = '<div style="padding:10px; opacity:0.5; font-size:0.8rem;">No records found</div>';
+                    return;
+                }
+
+                dates.forEach(date => {
+                    const dateHeader = document.createElement('div');
+                    dateHeader.innerText = `📅 ${date}`;
+                    dateHeader.style.cssText = "background: rgba(255,255,255,0.05); padding: 4px 10px; font-size: 0.75rem; border-radius: 4px; margin: 10px 0 5px 0; font-weight: 600; color: #94a3b8; display: inline-block;";
+                    container.appendChild(dateHeader);
+
+                    typeGroups[date].forEach(file => {
+                        const item = document.createElement('div');
+                        const isActive = file.file_name === selectedFileName && file.source_type === selectedSourceType;
+                        item.className = `file-item ${file.is_urgent ? 'urgent' : ''} ${file.called_back ? 'done' : ''} ${isActive ? 'active' : ''}`;
+                        item.innerHTML = `
+                            <div class="title">${file.file_name}</div>
+                            <div class="meta">${file.detected_language} ${file.is_urgent ? ' • 🚨 Urgent' : ''} ${file.called_back ? ' • ✅ Done' : ''}</div>
+                        `;
+                        item.onclick = () => selectFile(file, item);
+                        container.appendChild(item);
+                    });
+                });
+            };
+
+            renderGroup(phoneList, groups.Phone || {});
+            renderGroup(videoList, groups.Video || {});
+        }
+
+        function selectFile(file, element) {
+            selectedFileName = file.file_name;
+            selectedSourceType = file.source_type;
+
+            document.querySelectorAll('.file-item').forEach(el => el.classList.remove('active'));
+            if (element) element.classList.add('active');
+
+            const area = document.getElementById('contentArea');
+            area.className = "content-area animate-in";
+            area.innerHTML = `
+                ${file.is_urgent ? `<div class="urgent-badge">🚨 URGENT: ${file.urgency_reason}</div>` : ''}
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <h2 style="margin-bottom: 0.5rem;">${file.file_name}</h2>
+                        <div class="meta" style="margin-bottom: 1rem;">Source: ${file.source_type} | Language: ${file.detected_language}</div>
+                        
+                        <!-- Callback Status Toggle -->
+                        <div class="status-toggle ${file.called_back ? 'active' : ''}" onclick="toggleCalledBack('${file.file_name}', '${file.source_type}', this, event)">
+                            <input type="checkbox" ${file.called_back ? 'checked' : ''}>
+                            <label>Mark as Called Back</label>
+                        </div>
+                    </div>
+                    <div class="actions-group" style="display: flex; gap: 0.5rem; flex-direction: column; align-items: flex-end;">
+                         <button id="playBtn" class="btn-primary" style="background: var(--success); display: flex; align-items: center; gap: 0.5rem; width: 100%; justify-content: center;" onclick="toggleAudio('/api/audio/${file.source_type}/${encodeURIComponent(file.file_name)}')">
+                            <span id="playIcon">▶️</span> Play Audio
+                        </button>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button id="retryBtn" class="btn-secondary" style="font-size: 0.8rem; padding: 0.5rem 1rem;" onclick="reanalyzeFile('${file.file_name}', '${file.source_type}')">🔄 Retry AI</button>
+                            <button id="deleteBtn" class="btn-secondary" style="font-size: 0.8rem; padding: 0.5rem 1rem; color: #fca5a5; border-color: rgba(239, 68, 68, 0.3);" onclick="deleteRecord('${file.file_name}', '${file.source_type}')">🗑️ Delete</button>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; width: 100%; justify-content: flex-end;">
+                            ${file.source_type === 'Video' ? `<button class="btn-secondary" style="font-size: 0.75rem; padding: 0.4rem 0.8rem;" onclick="forceMp4ToMp3('${file.file_name}', '${file.source_type}')">🔄 MP4➡MP3</button>` : ''}
+                            <button class="btn-secondary" style="font-size: 0.75rem; padding: 0.4rem 0.8rem;" onclick="forceAudioToTxt('${file.file_name}', '${file.source_type}')">🔄 Audio➡TXT</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="audioContainer" style="display: none; margin-bottom: 2rem; background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                    <audio id="mainAudio" controls style="width: 100%; height: 40px;"></audio>
+                </div>
+
+                <div class="section-title">Transcription Summary</div>
+                <p style="font-weight: 600; color: var(--accent); margin-bottom: 1rem;">${file.summary}</p>
+                
+                <div class="section-title">Raw Text</div>
+                <div>
+                     <!-- Add toggle logic if text is long (> 500 chars) -->
+                    <div id="transcript-${file.file_name}" class="transcript-box ${file.text.length > 500 ? 'collapsed' : ''}">${file.text}</div>
+                    ${file.text.length > 500 ?
+                    `<button class="toggle-btn" onclick="toggleTranscript(this, 'transcript-${file.file_name}')">
+                            <span class="icon">🔽</span> Show Full Content
+                        </button>` : ''
+                }
+                </div>
+
+                <div class="section-title">AI Suggested Reply</div>
+                ${file.source_type === 'Video' ? `
+                    <button class="btn-secondary" style="margin-bottom: 1rem;" onclick="document.getElementById('videoReplyBox').style.display='block'; this.style.display='none'">
+                        👁️ Show Suggested Reply
+                    </button>
+                    <div id="videoReplyBox" class="reply-box" style="display: none;">
+                ` : `<div class="reply-box">`}
+                    <button class="copy-btn btn-secondary" onclick="copyReply()">Copy Content</button>
+                    <div id="replyText" style="white-space: pre-wrap;">${file.suggested_reply}</div>
+                </div>
+            `;
+        }
+
+        async function toggleCalledBack(file_name, source_type, container, event) {
+            const checkbox = container.querySelector('input');
+
+            // If the user clicked the div but not the checkbox itself, manually toggle the checkbox
+            if (event.target !== checkbox) {
+                checkbox.checked = !checkbox.checked;
+            }
+
+            const newStatus = checkbox.checked;
+
+            try {
+                const resp = await fetch('/api/called-back', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        file_name: file_name,
+                        source_type: source_type,
+                        status: newStatus
+                    })
+                });
+
+                if (resp.ok) {
+                    if (newStatus) container.classList.add('active');
+                    else container.classList.remove('active');
+
+                    // Update local data
+                    const file = currentFiles.find(f => f.file_name === file_name && f.source_type === source_type);
+                    if (file) {
+                        file.called_back = newStatus;
+                        // IMPORTANT: Refresh the list to show the cross-out effect
+                        renderFileList();
+                    }
+                } else {
+                    checkbox.checked = !newStatus; // Rollback
+                    alert('Failed to update status');
+                }
+            } catch (e) {
+                checkbox.checked = !newStatus; // Rollback
+                alert('Request failed: ' + e);
+            }
+        }
+
+        function toggleTranscript(btn, elementId) {
+            const el = document.getElementById(elementId);
+            const isCollapsed = el.classList.contains('collapsed');
+
+            if (isCollapsed) {
+                el.classList.remove('collapsed');
+                btn.innerHTML = '<span class="icon">🔼</span> Show Less';
+            } else {
+                el.classList.add('collapsed');
+                btn.innerHTML = '<span class="icon">🔽</span> Show Full Content';
+            }
+        }
+
+        async function forceMp4ToMp3(file_name, source_type) {
+            if (!confirm(`Are you sure you want to re-extract MP3 from Video for "${file_name}"?`)) return;
+
+            const btn = document.querySelector('button[onclick*="forceMp4ToMp3"]');
+            const originalText = btn ? btn.innerText : '🔄 MP4➡MP3';
+            if (btn) {
+                btn.innerText = 'Extracting...';
+                btn.disabled = true;
+            }
+
+            try {
+                const payload = { file_name: file_name, source_type: source_type };
+                const resp = await fetch('/api/convert/mp4-to-mp3', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (resp.ok) {
+                    alert('MP3 extracted successfully.');
+                } else {
+                    const err = await resp.json();
+                    alert('Error: ' + err.detail);
+                }
+            } catch (e) {
+                alert('Request failed: ' + e);
+            } finally {
+                if (btn) {
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                }
+            }
+        }
+
+        async function forceAudioToTxt(file_name, source_type) {
+            const langChoice = prompt(
+                `Re-transcribe "${file_name}"?\n\nEnter language code or leave empty for Auto-Detect:\n- en: English\n- zh: Chinese\n- Empty: Auto`,
+                ""
+            );
+
+            if (langChoice === null) return; // User cancelled
+
+            const language = langChoice.trim() === "" ? null : langChoice.trim();
+
+            const btn = document.querySelector('button[onclick*="forceAudioToTxt"]');
+            const originalText = btn ? btn.innerText : '🔄 Audio➡TXT';
+            if (btn) {
+                btn.innerText = 'Transcribing...';
+                btn.disabled = true;
+            }
+
+            try {
+                const payload = {
+                    file_name: file_name,
+                    source_type: source_type,
+                    language: language
+                };
+
+                const resp = await fetch('/api/convert/audio-to-txt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (resp.ok) {
+                    const updatedFile = await resp.json();
+                    // Update local list
+                    const idx = currentFiles.findIndex(f => f.file_name === file_name && f.source_type === source_type);
+                    if (idx !== -1) currentFiles[idx] = updatedFile;
+
+                    // Refresh list and display
+                    renderFileList();
+                    const activeItem = document.querySelector(`.file-item.active`);
+                    selectFile(updatedFile, activeItem);
+
+                    alert('Re-transcription complete.');
+                } else {
+                    const err = await resp.json();
+                    alert('Error: ' + err.detail);
+                }
+            } catch (e) {
+                alert('Request failed: ' + e);
+            } finally {
+                if (btn) {
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                }
+            }
+        }
+
+        async function reanalyzeFile(file_name, source_type) {
+            const btn = document.getElementById('retryBtn');
+            const originalText = btn.innerText;
+            btn.innerText = 'Analyzing...';
+            btn.disabled = true;
+
+            try {
+                const payload = { file_name: file_name, source_type: source_type };
+                const resp = await fetch('/api/reanalyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const updatedFile = await resp.json();
+
+                // Update local list
+                const idx = currentFiles.findIndex(f => f.file_name === file_name && f.source_type === source_type);
+                if (idx !== -1) currentFiles[idx] = updatedFile;
+
+                // Refresh list and display
+                renderFileList();
+                const activeItem = document.querySelector(`.file-item.active`);
+                selectFile(updatedFile, activeItem);
+
+                btn.innerText = 'Success!';
+            } catch (e) {
+                alert('Analysis failed: ' + e);
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function copyReply() {
+            const text = document.getElementById('replyText').innerText;
+            await navigator.clipboard.writeText(text);
+            const btn = document.querySelector('.copy-btn');
+            btn.innerText = 'Copied!';
+            btn.classList.add('btn-primary');
+            setTimeout(() => {
+                btn.innerText = 'Copy Content';
+                btn.classList.remove('btn-primary');
+            }, 2000);
+        }
+
+        async function deleteRecord(file_name, source_type) {
+            if (!confirm(`确定要永久删除记录 "${file_name}" 及其所有相关文件（视频/音频/文本）吗？此操作不可撤销。`)) {
+                return;
+            }
+
+            try {
+                const resp = await fetch(`/api/files/${source_type}/${encodeURIComponent(file_name)}`, {
+                    method: 'DELETE'
+                });
+
+                if (resp.ok) {
+                    // Update local list
+                    currentFiles = currentFiles.filter(f => !(f.file_name === file_name && f.source_type === source_type));
+                    renderFileList();
+
+                    // Clear content area
+                    document.getElementById('contentArea').innerHTML = `
+                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-muted);">
+                            <p>Record deleted successfully</p>
+                        </div>
+                    `;
+                } else {
+                    const error = await resp.json();
+                    alert('Delete failed: ' + error.detail);
+                }
+            } catch (e) {
+                alert('Error deleting record: ' + e);
+            }
+        }
+
+        document.getElementById('processBtn').onclick = async () => {
+            const btn = document.getElementById('processBtn');
+            btn.innerText = 'Processing...';
+            btn.disabled = true;
+            try {
+                await fetch('/api/process', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'start' }) });
+                await fetchFiles();
+            } catch (e) {
+                alert('Error processing files: ' + e);
+            } finally {
+                btn.innerText = 'Scan & Process Files';
+                btn.disabled = false;
+            }
+        };
+
+        async function syncTextNow() {
+            const btn = document.getElementById('textNowBtn');
+            const toggle = document.getElementById('replyToggle');
+            const enableReply = toggle.checked;
+
+            const originalText = btn.innerText;
+            btn.innerText = 'Launching...';
+            btn.disabled = true;
+            try {
+                const resp = await fetch('/api/sync-textnow', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enable_reply: enableReply })
+                });
+                const res = await resp.json();
+                // alert(res.message); 
+                // Don't alert blocking, just log
+                console.log(res.message);
+
+                // Visual feedback on button
+                btn.innerText = enableReply ? 'Running (Reply ON)' : 'Running (No Reply)';
+                setTimeout(() => { btn.innerText = originalText; btn.disabled = false; }, 3000);
+
+            } catch (e) {
+                alert("Error: " + e);
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function toggleAudio(url) {
+            const container = document.getElementById('audioContainer');
+            const audio = document.getElementById('mainAudio');
+            const playIcon = document.getElementById('playIcon');
+            const playBtn = document.getElementById('playBtn');
+
+            if (audio.src.includes(url) && !audio.paused) {
+                audio.pause();
+                playIcon.innerText = '▶️';
+                playBtn.style.background = 'var(--success)';
+            } else {
+                if (!audio.src.includes(url)) {
+                    audio.src = url;
+                }
+                audio.play();
+                container.style.display = 'block';
+                playIcon.innerText = '⏸️';
+                playBtn.style.background = 'var(--primary)';
+            }
+
+            audio.onended = () => {
+                playIcon.innerText = '▶️';
+                playBtn.style.background = 'var(--success)';
+            };
+        }
+
+        // Initial load
+        fetchConfig();
+        fetchFiles();
+
+        async function openSettings() {
+            const resp = await fetch('/api/config');
+            const config = await resp.json();
+
+            document.getElementById('confVideoDir').value = config.VIDEO_DIR;
+            document.getElementById('confAudioDir').value = config.AUDIO_DIR;
+            document.getElementById('confTxtDir').value = config.TXT_DIR;
+            document.getElementById('confWavDir').value = config.WAV_DIR;
+            document.getElementById('confWavTxtDir').value = config.WAV_TXT_DIR;
+
+            document.getElementById('settingsModal').style.display = 'flex';
+        }
+
+        async function saveSettings() {
+            const updates = {
+                VIDEO_DIR: document.getElementById('confVideoDir').value,
+                AUDIO_DIR: document.getElementById('confAudioDir').value,
+                TXT_DIR: document.getElementById('confTxtDir').value,
+                WAV_DIR: document.getElementById('confWavDir').value,
+                WAV_TXT_DIR: document.getElementById('confWavTxtDir').value,
+            };
+
+            try {
+                const resp = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates)
+                });
+
+                if (resp.ok) {
+                    alert('Configuration saved successfully!');
+                    document.getElementById('settingsModal').style.display = 'none';
+                    // Refresh files as directories might have changed
+                    fetchFiles();
+                } else {
+                    alert('Error saving config');
+                }
+            } catch (e) {
+                alert('Request failed: ' + e);
+            }
+        }
+
+        // Reply History Functions
+        let fullHistory = []; // Store for filtering
+
+        async function openReplyHistory() {
+            document.getElementById('replyHistoryModal').style.display = 'flex';
+            const list = document.getElementById('historyList');
+            list.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading history...</div>';
+
+            try {
+                // Add a timestamp to prevent caching
+                const resp = await fetch('/api/replied-history?_t=' + new Date().getTime());
+                let history = await resp.json();
+
+                if (!Array.isArray(history)) {
+                    console.warn("History data is not an array:", history);
+                    history = [];
+                }
+
+                fullHistory = history; // Store globally for filter
+
+                // Render Search Bar if not exists
+                if (!document.getElementById('historySearch')) {
+                    const searchContainer = document.createElement('div');
+                    searchContainer.style.marginBottom = '1rem';
+                    searchContainer.innerHTML = `
+                        <input type="text" id="historySearch" placeholder="🔍 Search phone number or status..." 
+                        style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;"
+                        onkeyup="filterHistory()">
+                    `;
+                    // Insert before the list
+                    list.parentNode.insertBefore(searchContainer, list);
+                } else {
+                    document.getElementById('historySearch').value = ''; // Reset
+                }
+
+                renderHistoryList(fullHistory);
+
+            } catch (e) {
+                list.innerHTML = `<div style="text-align: center; color: #fca5a5; padding: 2rem;">Error loading history: ${e}</div>`;
+            }
+        }
+
+        function filterHistory() {
+            const query = document.getElementById('historySearch').value.toLowerCase();
+            const filtered = fullHistory.filter(item =>
+                (item.phone && item.phone.toLowerCase().includes(query)) ||
+                (item.status && item.status.toLowerCase().includes(query)) ||
+                (item.note && item.note.toLowerCase().includes(query))
+            );
+            renderHistoryList(filtered);
+        }
+
+        function renderHistoryList(data) {
+            const list = document.getElementById('historyList');
+            if (!data || data.length === 0) {
+                list.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 2rem;">No matching records found.</div>';
+                return;
+            }
+
+            list.innerHTML = '';
+
+            // Group by Date
+            const groups = {};
+            data.forEach(item => {
+                let dateStr = 'Unknown Date';
+                if (item.time) {
+                    try {
+                        const d = new Date(item.time.replace(/-/g, '/')); // Fix for safari/legacy
+                        const today = new Date();
+                        const yesterday = new Date();
+                        yesterday.setDate(today.getDate() - 1);
+
+                        // Simple day string for comparison
+                        const dStr = d.toDateString();
+                        const tStr = today.toDateString();
+                        const yStr = yesterday.toDateString();
+
+                        if (dStr === tStr) dateStr = 'Today';
+                        else if (dStr === yStr) dateStr = 'Yesterday';
+                        else dateStr = d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+                    } catch (e) { dateStr = item.time.split(' ')[0] || 'Unknown'; }
+                }
+                if (!groups[dateStr]) groups[dateStr] = [];
+                groups[dateStr].push(item);
+            });
+
+            // Render Groups
+            // Sort keys: Today first, Yesterday second, then dates descending? 
+            // Since data is likely already sorted by time DESC, we can just iterate the insertion order if we trust it,
+            // OR explicitly sort. Keys iteration order is not guaranteed but usually follows insertion for strings in modern JS if not numeric.
+            // Let's use the order appearing in data (which is sorted desc).
+
+            const renderedKeys = new Set();
+
+            // We iterate original data to preserve sorting, and pick the group leader
+            data.forEach(item => {
+                let dateKey = 'Unknown Date';
+                // Same logic to find key
+                if (item.time) {
+                    try {
+                        const d = new Date(item.time.replace(/-/g, '/'));
+                        const today = new Date();
+                        const yesterday = new Date();
+                        yesterday.setDate(today.getDate() - 1);
+
+                        const dStr = d.toDateString();
+                        const tStr = today.toDateString();
+                        const yStr = yesterday.toDateString();
+
+                        if (dStr === tStr) dateKey = 'Today';
+                        else if (dStr === yStr) dateKey = 'Yesterday';
+                        else dateKey = d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+                    } catch (e) { dateKey = item.time.split(' ')[0] || 'Unknown'; }
+                }
+
+                if (!renderedKeys.has(dateKey)) {
+                    // Render Header
+                    const header = document.createElement('div');
+                    header.style.cssText = "font-size: 0.85rem; font-weight: 700; color: #94a3b8; margin: 1.5rem 0 0.5rem 0; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center;";
+
+                    const count = groups[dateKey].length;
+                    header.innerHTML = `${dateKey} <span style="background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; margin-left: 10px; font-weight: 500; color: var(--text-muted);">${count} Replies</span>`;
+
+                    if (list.children.length === 0) header.style.marginTop = '0'; // No margin for first
+                    list.appendChild(header);
+
+                    // Render all items for this group
+                    groups[dateKey].forEach(gItem => {
+                        const el = document.createElement('div');
+                        el.style.cssText = "background: rgba(255,255,255,0.03); padding: 0.8rem 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; transition: background 0.2s;";
+                        el.onmouseover = () => el.style.background = "rgba(255,255,255,0.08)";
+                        el.onmouseout = () => el.style.background = "rgba(255,255,255,0.03)";
+
+                        const timeOnly = gItem.time.split(' ')[1] || gItem.time;
+
+                        el.innerHTML = `
+                            <div style="display:flex; align-items:center; gap:1rem;">
+                                <div style="background: rgba(74, 222, 128, 0.1); color: #4ade80; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">📞</div>
+                                <div>
+                                    <div style="font-weight: 600; font-size: 1rem; color: #e2e8f0; font-family: monospace;">${gItem.phone}</div>
+                                    <div style="font-size: 0.75rem; color: var(--text-muted);">${gItem.note || 'Auto-reply sent'}</div>
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size: 0.75rem; font-weight: 600; color: #4ade80; background: rgba(74, 222, 128, 0.1); padding: 2px 8px; border-radius: 12px; display: inline-block; margin-bottom: 4px;">${gItem.status}</div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted);">${timeOnly}</div>
+                            </div>
+                        `;
+                        list.appendChild(el);
+                    });
+
+                    renderedKeys.add(dateKey);
+                }
+            });
+        }
+
+        function closeReplyHistory() {
+            document.getElementById('replyHistoryModal').style.display = 'none';
+        }
+
+        // Manual Send Functions 
+        const SMS_TEMPLATES = {
+            full: `尊敬的旅客，
+很抱歉未能接听您的来电，请参考以下信息：
+购票：请访问东航官网 www.ceair.com，或联系您的代理人 / 第三方网站。
+退改票：
+– 如在东航官网购票，请发送邮件至 MUYVR@chinaeastern.ca
+– 其他渠道购票，请联系原购票渠道。
+中转服务：
+https://www.ceair.com/self-service/service-submit/transferService
+特殊服务申请：
+– 温哥华始发：MUYVR@chinaeastern.ca
+– 多伦多始发：MUyyzSales@chinaeastern.ca
+改名服务：请致电 011 86 21 2069 5530
+其他事项：请发送邮件至 MUyyzSales@chinaeastern.ca or call 011 86 21 2069 5530
+
+免责声明：本短信为系统自动回复，仅供参考，请旅客自行核实相关信息。本号码无法接收回复短信，敬请谅解。
+
+Dear Customer,
+Sorry we missed your call. Please refer to the information below.
+
+For ticket purchase, please visit China Eastern official website www.ceair.com, or contact your agent / third-party website.
+
+For refund or change:
+– If ticket purchased on China Eastern website, please email MUYVR@chinaeastern.ca
+
+– Otherwise, please contact original purchase channel.
+
+Transfer service:
+https://www.ceair.com/self-service/service-submit/transferService
+
+Special service request:
+– Vancouver departure: MUYVR@chinaeastern.ca
+
+– Toronto departure: MUyyzSales@chinaeastern.ca
+
+Name change: please call 011 86 21 2069 5530
+
+Other inquiries: please email MUyyzSales@chinaeastern.ca or call 011 86 21 2069 5530
+
+Disclaimer: This is an auto-reply message. Information is for reference only, please verify by yourself. Do not reply to this message, replies cannot be received.`,
+            cn: `尊敬的旅客，
+很抱歉未能接听您的来电。
+如需帮助，请发送邮件至 MUyyzSales@chinaeastern.ca
+或致电 011 86 21 2069 5530
+
+谢谢！`,
+            en: `Dear Customer,
+Sorry we missed your call.
+For assistance, please email MUyyzSales@chinaeastern.ca
+or call 011 86 21 2069 5530
+
+Thank you!`
+        };
+
+        function openManualSend() {
+            document.getElementById('manualSendModal').style.display = 'flex';
+            document.getElementById('templateSelect').value = '';
+            document.getElementById('manualMessage').value = '';
+        }
+
+        function closeManualSend() {
+            document.getElementById('manualSendModal').style.display = 'none';
+        }
+
+        function loadTemplate() {
+            const select = document.getElementById('templateSelect');
+            const textarea = document.getElementById('manualMessage');
+
+            if (select.value && select.value !== 'custom') {
+                textarea.value = SMS_TEMPLATES[select.value];
+            } else if (select.value === 'custom') {
+                textarea.value = '';
+                textarea.focus();
+            }
+        }
+
+        async function sendManualMessage() {
+            const message = document.getElementById('manualMessage').value.trim();
+
+            if (!message) {
+                alert('请输入消息内容');
+                return;
+            }
+
+            if (!confirm('确认发送此消息到当前选中的TextNow对话？\n\n请确保已在Chrome中选择了目标对话。')) {
+                return;
+            }
+
+            try {
+                const resp = await fetch('/api/textnow-manual-send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+
+                const result = await resp.json();
+
+                if (resp.ok && result.success) {
+                    alert('✅ 消息发送成功！');
+                    closeManualSend();
+                } else {
+                    alert('❌ 发送失败: ' + (result.error || '未知错误'));
+                }
+            } catch (e) {
+                alert('❌ 请求失败: ' + e.message);
+            }
+        }
+    </script>
+</body>
+
+</html>
