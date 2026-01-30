@@ -556,6 +556,190 @@ def generate_reply(req: GenerateReplyRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# ==================== STEALTH MODE APIs ====================
+
+@app.get("/api/stealth/status")
+def get_stealth_status():
+    """Returns the status of stealth mode and Chrome connection."""
+    
+    # Check for portable chrome
+    portable_chrome_path = os.path.join(BASE_DIR, "chrome_portable", "bin", "chrome.exe")
+    portable_driver_path = os.path.join(BASE_DIR, "chrome_portable", "bin", "chromedriver.exe")
+    has_portable = os.path.exists(portable_chrome_path) and os.path.exists(portable_driver_path)
+
+    status = {
+        "chrome_running": is_port_open(9222),
+        "stealth_script_exists": os.path.exists(os.path.join(BASE_DIR, "stealth_injector.js")),
+        "stealth_utils_exists": os.path.exists(os.path.join(BASE_DIR, "stealth_utils.py")),
+        "selenium_stealth_installed": False,
+        "chrome_profile_stealth_exists": os.path.exists(os.path.join(BASE_DIR, "chrome_profile_manual")), # Update to match manual profile
+        "has_portable_chrome": has_portable
+    }
+    
+    # Check if selenium-stealth is installed
+    try:
+        import selenium_stealth
+        status["selenium_stealth_installed"] = True
+    except ImportError:
+        pass
+    
+    return status
+
+@app.post("/api/stealth/launch-chrome")
+def launch_stealth_chrome():
+    """Launches Chrome (Prioritizing Portable Version)."""
+    if is_port_open(9222):
+        return {"status": "already_running", "message": "Chrome is already running on port 9222"}
+    
+    # Check for portable chrome first
+    portable_bat = os.path.join(BASE_DIR, "run_portable.bat")
+    portable_exe = os.path.join(BASE_DIR, "chrome_portable", "bin", "chrome.exe")
+    
+    if os.path.exists(portable_exe) and os.path.exists(portable_bat):
+        print(f"Launching Portable Chrome from {portable_bat}...")
+        try:
+            subprocess.Popen([portable_bat], creationflags=subprocess.CREATE_NEW_CONSOLE)
+            import time
+            time.sleep(3)
+            if is_port_open(9222):
+                return {"status": "success", "message": "✅ Portable Chrome Launched! Please Login Manually."}
+            else:
+                return {"status": "error", "message": "Chrome launched but port 9222 not responding"}
+        except Exception as e:
+             raise HTTPException(status_code=500, detail=f"Failed to launch Portable Chrome: {str(e)}")
+
+    # Fallback to System Chrome (Old Logic)
+    print("Portable Chrome not found, trying System Chrome...")
+    
+    chrome_paths = [
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        os.path.expanduser(r"~\AppData\Local\Google\Chrome\Application\chrome.exe")
+    ]
+    
+    chrome_exe = "chrome.exe"  # Fallback to PATH
+    for p in chrome_paths:
+        if os.path.exists(p):
+            chrome_exe = p
+            break
+    
+    profile_dir = os.path.join(BASE_DIR, "chrome_profile_stealth")
+    if not os.path.exists(profile_dir):
+        os.makedirs(profile_dir)
+    
+    cmd = [
+        chrome_exe,
+        "--new-window",
+        "--remote-debugging-port=9222",
+        f"--user-data-dir={profile_dir}",
+        "--disable-blink-features=AutomationControlled",
+        "--exclude-switches=enable-automation",
+        "--disable-infobars",
+        "--start-maximized",
+        "--no-first-run"
+    ]
+    
+    try:
+        subprocess.Popen(cmd, creationflags=0x08000000 if sys.platform == 'win32' else 0)
+        import time
+        time.sleep(3)  # Wait for launch
+        
+        if is_port_open(9222):
+            return {"status": "success", "message": "System Chrome launched (Stealth Mode). Please log in."}
+        else:
+            return {"status": "error", "message": "Chrome launched but port 9222 not responding"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to launch Chrome: {str(e)}")
+
+@app.post("/api/stealth/install-portable")
+async def install_portable_chrome():
+    """Triggers the download of Portable Chrome."""
+    script_path = os.path.join(BASE_DIR, "download_chrome.py")
+    if not os.path.exists(script_path):
+         raise HTTPException(status_code=404, detail="download_chrome.py not found")
+         
+    try:
+        # Run in separate process
+        subprocess.Popen([sys.executable, script_path], creationflags=subprocess.CREATE_NEW_CONSOLE)
+        return {"status": "success", "message": "Download started in new window. Please wait for it to finish."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/stealth/test")
+async def test_stealth():
+    """Runs anti-detection tests."""
+    try:
+        script_path = os.path.join(BASE_DIR, "test_anti_detection.py")
+        
+        if not os.path.exists(script_path):
+            raise HTTPException(status_code=404, detail="test_anti_detection.py not found")
+        
+        # Run test script in background
+        result = subprocess.run(
+            [sys.executable, script_path],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=BASE_DIR
+        )
+        
+        # Parse output for results
+        output = result.stdout + result.stderr
+        
+        # Simple parsing
+        passed = output.count("✅")
+        failed = output.count("❌")
+        
+        return {
+            "status": "success",
+            "passed": passed,
+            "failed": failed,
+            "output": output
+        }
+    except subprocess.TimeoutExpired:
+        return {"status": "timeout", "message": "Test timed out after 30 seconds"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/stealth/log")
+def get_stealth_log():
+    """Returns the last 100 lines of textnow_automation.log."""
+    log_path = os.path.join(BASE_DIR, "textnow_automation.log")
+    
+    if not os.path.exists(log_path):
+        return {"lines": [], "message": "Log file not found"}
+    
+    try:
+        with open(log_path, 'r', encoding='utf-8', errors='ignore') as f:
+            lines = f.readlines()
+            # Return last 100 lines
+            recent_lines = lines[-100:] if len(lines) > 100 else lines
+            return {"lines": recent_lines, "total_lines": len(lines)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/stealth/install-deps")
+async def install_stealth_deps():
+    """Installs selenium-stealth dependency."""
+    try:
+        result = subprocess.run(
+            [sys.executable, "-m", "pip", "install", "selenium-stealth"],
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
+        
+        if result.returncode == 0:
+            return {"status": "success", "message": "selenium-stealth installed successfully", "output": result.stdout}
+        else:
+            return {"status": "error", "message": "Installation failed", "output": result.stderr}
+    except subprocess.TimeoutExpired:
+        return {"status": "timeout", "message": "Installation timed out"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== END STEALTH MODE APIs ====================
+
 if __name__ == "__main__":
     import uvicorn
     import sys

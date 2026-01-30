@@ -99,6 +99,10 @@ class TextNowBot:
             print(f"[Templates] Could not load templates.json: {e}")
         
         self.ai = None
+        self.config = config or {}
+        self.reply_cooldown = self.config.get("REPLY_COOLDOWN_HOURS", 8)
+        print(f"[Config] Reply cooldown set to {self.reply_cooldown} hours")
+
         if config:
             try:
                 self.ai = AIService(config)
@@ -124,7 +128,53 @@ class TextNowBot:
     def start_browser(self):
         print("Connecting to existing Chrome instance (127.0.0.1:9222)...")
         try:
-            self.driver = webdriver.Chrome(options=self.options)
+            # Check for portable driver first
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            portable_driver = os.path.join(base_dir, "chrome_portable", "bin", "chromedriver.exe")
+            
+            if os.path.exists(portable_driver):
+                print(f"[Portable] Found portable driver: {portable_driver}")
+                from selenium.webdriver.chrome.service import Service
+                service = Service(executable_path=portable_driver)
+                self.driver = webdriver.Chrome(service=service, options=self.options)
+            else:
+                self.driver = webdriver.Chrome(options=self.options)
+            
+            # === STEALTH MODE: Inject anti-detection scripts ===
+            print("[Stealth] Applying anti-detection measures...")
+            
+            # Load stealth injector script
+            stealth_script = ""
+            try:
+                stealth_file = os.path.join(os.path.dirname(__file__), "stealth_injector.js")
+                if os.path.exists(stealth_file):
+                    with open(stealth_file, 'r', encoding='utf-8') as f:
+                        stealth_script = f.read()
+                    print("[Stealth] Loaded stealth_injector.js")
+            except Exception as e:
+                print(f"[Warning] Could not load stealth script: {e}")
+            
+            # Fallback inline stealth script
+            if not stealth_script:
+                stealth_script = """
+                Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+                window.chrome = {runtime: {}};
+                Object.defineProperty(navigator, 'plugins', {
+                    get: () => [1, 2, 3, 4, 5]
+                });
+                Object.defineProperty(navigator, 'languages', {
+                    get: () => ['en-US', 'en', 'zh-CN', 'zh']
+                });
+                """
+            
+            # Execute stealth script on every page load
+            try:
+                self.driver.execute_cdp_cmd('Page.addScriptToEvaluateOnNewDocument', {
+                    'source': stealth_script
+                })
+                print("[Stealth] Anti-detection script injected successfully")
+            except Exception as e:
+                print(f"[Warning] Could not inject stealth script: {e}")
             
             # Configure download behavior dynamically using CDP since we are attaching
             try:
@@ -132,13 +182,23 @@ class TextNowBot:
                     'behavior': 'allow', 
                     'downloadPath': self.download_dir
                 })
-                print(f"Download path set to: {self.download_dir}")
+                print(f"[Config] Download path set to: {self.download_dir}")
             except Exception as e:
-                print(f"Warning: Could not set download behavior: {e}")
+                print(f"[Warning] Could not set download behavior: {e}")
+            
+            # Additional CDP commands for stealth
+            try:
+                # Disable automation flags
+                self.driver.execute_cdp_cmd('Network.setUserAgentOverride', {
+                    "userAgent": self.driver.execute_script("return navigator.userAgent").replace("HeadlessChrome", "Chrome")
+                })
+                print("[Stealth] User agent normalized")
+            except Exception as e:
+                print(f"[Warning] Could not override user agent: {e}")
                 
         except Exception as e:
             print("ERROR: Failed to connect to Chrome.")
-            print("make sure you have run 'run_chrome_debug.bat' and kept the window open.")
+            print("Make sure you have run 'run_chrome_stealth.bat' and kept the window open.")
             raise e
 
     def close(self):
@@ -241,8 +301,10 @@ class TextNowBot:
             print(f"    [Error] in download_voicemails: {e}")
             return 0
 
-    def has_replied_recently(self, phone, hours=8):
+    def has_replied_recently(self, phone, hours=None):
         """Check if we have replied to this number within the last N hours."""
+        if hours is None:
+            hours = self.reply_cooldown
         try:
             h_file = "replied_history.json"
             if not os.path.exists(h_file):
@@ -500,9 +562,9 @@ class TextNowBot:
                     except:
                         phone_number = "Unknown"
 
-                    # 4. CHECK DUPLICATE REPLY (8 HOURS)
-                    if self.has_replied_recently(phone_number, hours=8):
-                        print(f"    [Skip] Already replied to {phone_number} in the last 8 hours.")
+                    # 4. CHECK DUPLICATE REPLY (Dynamic)
+                    if self.has_replied_recently(phone_number):
+                        print(f"    [Skip] Already replied to {phone_number} in the last {self.reply_cooldown} hours.")
                         # Still proceed to download VM if needed, but skip sending SMS
                         self.download_voicemails(phone_number)
                         continue

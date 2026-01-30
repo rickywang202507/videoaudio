@@ -24,6 +24,9 @@
                     Settings</button>
                 <button id="templatesBtn" class="btn-secondary" style="margin-right: 1rem;" onclick="openTemplates()">📝
                     Templates</button>
+                <button id="stealthBtn" class="btn-secondary" style="margin-right: 1rem;"
+                    onclick="openStealthPanel()">🛡️
+                    Stealth Mode</button>
                 <select id="aiSelect" class="btn-secondary"
                     style="background: rgba(45, 55, 72, 0.9); color: white; border: 1px solid rgba(255, 255, 255, 0.2); padding: 0.75rem 1rem; border-radius: 12px; margin-right: 1.5rem; cursor: pointer; min-width: 150px; font-weight: 600; appearance: auto;">
                     <!-- Options will be populated -->
@@ -262,6 +265,103 @@
             <div style="display: flex; gap: 1rem; justify-content: flex-end;">
                 <button onclick="closeManualSend()" class="btn-secondary">取消</button>
                 <button onclick="sendManualMessage()" class="btn-primary">发送消息</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stealth Mode Panel Modal -->
+    <div id="stealthModal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center;">
+        <div
+            style="background: var(--bg-card); padding: 2rem; border-radius: 20px; width: 800px; max-width: 95%; max-height: 85vh; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(16px);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="margin: 0;">🛡️ Stealth Mode Control Panel</h2>
+                <button onclick="closeStealthPanel()" class="btn-secondary" style="padding: 0.2rem 0.6rem;">✕</button>
+            </div>
+
+            <!-- Status Section -->
+            <div
+                style="background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; border: 1px solid rgba(255,255,255,0.1);">
+                <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--accent);">📊 System Status</h3>
+                <div id="stealthStatus" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span id="chromeStatus" style="font-size: 1.5rem;">⏳</span>
+                        <span style="color: var(--text-muted); font-size: 0.9rem;">Chrome (Port 9222)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span id="stealthLibStatus" style="font-size: 1.5rem;">⏳</span>
+                        <span style="color: var(--text-muted); font-size: 0.9rem;">selenium-stealth</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span id="stealthScriptStatus" style="font-size: 1.5rem;">⏳</span>
+                        <span style="color: var(--text-muted); font-size: 0.9rem;">Stealth Scripts</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span id="profileStatus" style="font-size: 1.5rem;">⏳</span>
+                        <span style="color: var(--text-muted); font-size: 0.9rem;">Stealth Profile</span>
+                    </div>
+                </div>
+                <button onclick="refreshStealthStatus()" class="btn-secondary"
+                    style="margin-top: 1rem; font-size: 0.8rem; padding: 0.4rem 0.8rem;">🔄 Refresh Status</button>
+            </div>
+
+            <!-- Actions Section -->
+            <div
+                style="background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; border: 1px solid rgba(255,255,255,0.1);">
+                <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--accent);">🎮 Quick Actions</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <button onclick="launchStealthChrome()" class="btn-primary" style="width: 100%;">
+                        🚀 Launch Stealth Chrome
+                    </button>
+                    <button onclick="runStealthTest()" class="btn-secondary" style="width: 100%;">
+                        🧪 Run Detection Test
+                    </button>
+                    <button onclick="installStealthDeps()" class="btn-secondary" style="width: 100%;">
+                        📦 Install Dependencies
+                    </button>
+                    <button onclick="viewStealthLog()" class="btn-secondary" style="width: 100%;">
+                        📄 View Automation Log
+                    </button>
+                </div>
+            </div>
+
+            <!-- Test Results Section -->
+            <div id="testResultsSection"
+                style="display: none; background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; border: 1px solid rgba(255,255,255,0.1);">
+                <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--accent);">🧪 Test Results</h3>
+                <div id="testResults"
+                    style="font-family: monospace; font-size: 0.85rem; color: var(--text-muted); max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; white-space: pre-wrap;">
+                    Running tests...
+                </div>
+            </div>
+
+            <!-- Log Viewer Section -->
+            <div id="logViewerSection"
+                style="display: none; background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; border: 1px solid rgba(255,255,255,0.1);">
+                <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--accent);">📄 Automation Log (Last 100
+                    lines)</h3>
+                <div id="logContent"
+                    style="font-family: monospace; font-size: 0.75rem; color: var(--text-muted); max-height: 300px; overflow-y: auto; background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; white-space: pre-wrap;">
+                    Loading log...
+                </div>
+            </div>
+
+            <!-- Documentation Links -->
+            <div
+                style="background: rgba(96, 165, 250, 0.1); padding: 1rem; border-radius: 12px; border: 1px solid rgba(96, 165, 250, 0.2);">
+                <div style="color: #60a5fa; font-size: 0.9rem; margin-bottom: 0.5rem;">📚 Documentation</div>
+                <div style="color: var(--text-muted); font-size: 0.8rem; line-height: 1.6;">
+                    • <strong>Quick Start:</strong> QUICK_START.md<br>
+                    • <strong>Full Guide:</strong> ANTI_BOT_SOLUTION.md<br>
+                    • <strong>Update Summary:</strong> UPDATE_SUMMARY.md<br>
+                    <br>
+                    <strong>Important:</strong> After launching Chrome, manually log in to TextNow and complete any
+                    verification before running automation.
+                </div>
+            </div>
+
+            <div style="margin-top: 1.5rem; text-align: right;">
+                <button onclick="closeStealthPanel()" class="btn-primary">Close</button>
             </div>
         </div>
     </div>
@@ -1471,6 +1571,334 @@ Thank you!`
                 textarea.value = "Error generating reply: " + e;
             }
         }
+    </script>
+
+    <!-- ==================== STEALTH MODAL (HTML) ==================== -->
+    <div id="stealthModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 800px; width: 90%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="font-size: 1.5rem; font-weight: bold; margin: 0;">🛡️ Stealth Mode Control Panel</h2>
+                <span class="close" onclick="closeStealthPanel()"
+                    style="font-size: 2rem; cursor: pointer;">&times;</span>
+            </div>
+
+            <!-- Status Grid -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
+                <div style="background: #f9fafb; padding: 16px; border-radius: 8px; border: 1px solid #e5e7eb;">
+                    <h3 style="font-weight: bold; margin-bottom: 12px; font-size: 1.1rem;">System Status</h3>
+                    <ul style="list-style: none; padding: 0; margin: 0; font-size: 0.9rem; line-height: 2;">
+                        <li style="display: flex; justify-content: space-between;">
+                            <span>🚀 Chrome Running (9222):</span>
+                            <span id="chromeStatus" style="font-weight: bold;">Checking...</span>
+                        </li>
+                        <li style="display: flex; justify-content: space-between;">
+                            <span>📦 Portable Chrome (v121):</span>
+                            <span id="portableStatus" style="font-weight: bold;">Checking...</span>
+                        </li>
+                        <li style="display: flex; justify-content: space-between;">
+                            <span>📚 Selenium-Stealth Lib:</span>
+                            <span id="stealthLibStatus" style="font-weight: bold;">Checking...</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div style="background: #f9fafb; padding: 16px; border-radius: 8px; border: 1px solid #e5e7eb;">
+                    <h3 style="font-weight: bold; margin-bottom: 12px; font-size: 1.1rem;">Components</h3>
+                    <ul style="list-style: none; padding: 0; margin: 0; font-size: 0.9rem; line-height: 2;">
+                        <li style="display: flex; justify-content: space-between;">
+                            <span>📄 Injector Script (.js):</span>
+                            <span id="stealthScriptStatus" style="font-weight: bold;">Checking...</span>
+                        </li>
+                        <li style="display: flex; justify-content: space-between;">
+                            <span>👤 Stealth Profile:</span>
+                            <span id="profileStatus" style="font-weight: bold;">Checking...</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div style="margin-bottom: 24px;">
+                <h3 style="font-weight: bold; margin-bottom: 12px;">Quick Actions</h3>
+                <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                    <!-- Launch Button -->
+                    <button onclick="launchStealthChrome()" class="btn-primary"
+                        style="display: flex; align-items: center; gap: 8px; background-color: #059669;">
+                        <span id="launchBtnText">🚀 Launch Portable Chrome</span>
+                    </button>
+
+                    <!-- Install Portable Button -->
+                    <button id="installBtn" onclick="installPortableChrome()" class="btn-primary"
+                        style="display: inline-flex; align-items: center; gap: 8px; background-color: #2563eb;">
+                        ⬇️ Install Portable (v121)
+                    </button>
+
+                    <!-- Fix Deps Button -->
+                    <button onclick="installStealthDeps()" class="btn-secondary"
+                        style="display: flex; align-items: center; gap: 8px;">
+                        📦 Fix Dependencies
+                    </button>
+
+                    <!-- View Log Button -->
+                    <button onclick="viewStealthLog()" class="btn-secondary"
+                        style="display: flex; align-items: center; gap: 8px;">
+                        📄 View Log
+                    </button>
+
+                    <!-- Run Test Button -->
+                    <button onclick="runStealthTest()" class="btn-secondary"
+                        style="display: flex; align-items: center; gap: 8px; background-color: #4b5563; color: white;">
+                        🧪 Run Test
+                    </button>
+                </div>
+            </div>
+
+            <!-- Test Results -->
+            <div id="testResultsSection" style="margin-bottom: 24px; display: none;">
+                <h3 style="font-weight: bold; margin-bottom: 8px;">Test Results</h3>
+                <pre id="testResults"
+                    style="background: #111827; color: #4ade80; padding: 16px; border-radius: 8px; font-size: 12px; overflow: auto; height: 15rem; font-family: monospace;"></pre>
+            </div>
+
+            <!-- Log Viewer Area -->
+            <div id="logViewerSection" style="margin-bottom: 24px; display: none;">
+                <h3 style="font-weight: bold; margin-bottom: 8px;">Automation Log (Last 100 lines):</h3>
+                <pre id="logContent"
+                    style="background: #f3f4f6; color: #374151; padding: 16px; border-radius: 8px; font-size: 11px; overflow: auto; height: 15rem; font-family: monospace;"></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== STEALTH SCRIPTS ==================== -->
+    <script>
+        function openStealthPanel() {
+            document.getElementById('stealthModal').style.display = 'block';
+            refreshStealthStatus();
+        }
+
+        function closeStealthPanel() {
+            document.getElementById('stealthModal').style.display = 'none';
+        }
+
+        async function refreshStealthStatus() {
+            try {
+                const resp = await fetch('/api/stealth/status');
+                const status = await resp.json();
+
+                // Update status indicators (Safe checks)
+                const setStatus = (id, valid) => {
+                    const el = document.getElementById(id);
+                    if (el) el.innerText = valid ? '✅' : '❌';
+                };
+
+                const setStatusText = (id, text) => {
+                    const el = document.getElementById(id);
+                    if (el) el.innerText = text;
+                };
+
+                setStatusText('chromeStatus', status.chrome_running ? '✅ Running' : '🔴 Stopped');
+                setStatusText('portableStatus', status.has_portable_chrome ? '✅ Installed' : '❌ Missing');
+                setStatus('stealthLibStatus', status.selenium_stealth_installed);
+                setStatus('stealthScriptStatus', status.stealth_script_exists);
+                setStatus('profileStatus', status.chrome_profile_stealth_exists);
+
+                // Update Button Text Logic
+                const launchBtn = document.getElementById('launchBtnText');
+                const installBtn = document.getElementById('installBtn');
+
+                if (launchBtn) {
+                    if (status.chrome_running) {
+                        launchBtn.innerText = '✅ Chrome Active';
+                    } else if (status.has_portable_chrome) {
+                        launchBtn.innerText = '🚀 Launch Portable Chrome';
+                        if (installBtn) installBtn.style.display = 'none';
+                    } else {
+                        launchBtn.innerText = '⚠️ Launch System Chrome';
+                        if (installBtn) installBtn.style.display = 'inline-flex';
+                    }
+                }
+
+            } catch (e) {
+                console.error('[Stealth] Status Error:', e);
+            }
+        }
+
+        async function launchStealthChrome() {
+            const label = document.getElementById('launchBtnText');
+            // 获取实际的按钮元素（它是 span 的父元素）
+            const btn = label ? label.parentElement : event.target;
+
+            const originalText = label ? label.innerText : btn.innerText;
+
+            if (label) label.innerText = 'Launching...';
+            btn.disabled = true;
+
+            try {
+                const resp = await fetch('/api/stealth/launch-chrome', { method: 'POST' });
+                const result = await resp.json();
+
+                if (result.status === 'success') {
+                    alert('✅ Launched!\n\n1. Wait for Chrome\n2. Log in manually\n3. Keep window open');
+                    refreshStealthStatus();
+                } else if (result.status === 'already_running') {
+                    alert('ℹ️ ' + result.message);
+                } else {
+                    alert('❌ ' + result.message);
+                }
+            } catch (e) {
+                alert('Error: ' + e);
+            } finally {
+                // If not active, revert text
+                if (label && !label.innerText.includes('Active')) {
+                    label.innerText = originalText;
+                }
+                btn.disabled = false;
+            }
+        }
+
+        async function installPortableChrome() {
+            if (!confirm("Download Portable Chrome (~150MB)?")) return;
+            const btn = document.getElementById('installBtn');
+            if (btn) {
+                btn.innerText = '⏳ Downloading...';
+                btn.disabled = true;
+            }
+            try {
+                const resp = await fetch('/api/stealth/install-portable', { method: 'POST' });
+                const result = await resp.json();
+                alert(result.message);
+            } catch (e) { alert(e); }
+            finally {
+                if (btn) btn.disabled = false;
+                refreshStealthStatus(); // Refresh status to update button text
+            }
+        }
+
+        async function runStealthTest() {
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = 'Testing...';
+            btn.disabled = true;
+
+            // Show test results section
+            const section = document.getElementById('testResultsSection');
+            section.style.display = 'block';
+            document.getElementById('testResults').innerText = 'Running anti-detection tests...\n\nThis may take up to 30 seconds.';
+
+            try {
+                const resp = await fetch('/api/stealth/test', {
+                    method: 'POST'
+                });
+                const result = await resp.json();
+
+                if (result.status === 'success') {
+                    const summary = `Test Complete!\n\nPassed: ${result.passed} ✅\nFailed: ${result.failed} ❌\n\n--- Full Output ---\n${result.output}`;
+                    document.getElementById('testResults').innerText = summary;
+
+                    if (result.failed === 0 && result.passed > 0) {
+                        alert('🎉 All tests passed! Your stealth configuration is working correctly.');
+                    } else if (result.failed > 0) {
+                        alert(`⚠️ Some tests failed (${result.failed}/${result.passed + result.failed}).\n\nCheck the test results for details.`);
+                    }
+                } else if (result.status === 'timeout') {
+                    document.getElementById('testResults').innerText = 'Test timed out after 30 seconds.\n\nMake sure Chrome is running on port 9222.';
+                } else {
+                    document.getElementById('testResults').innerText = 'Test failed: ' + (result.message || 'Unknown error');
+                }
+            } catch (e) {
+                document.getElementById('testResults').innerText = 'Error running test: ' + e;
+                alert('Error running test: ' + e);
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function installStealthDeps() {
+            if (!confirm('Install selenium-stealth library?\n\nThis will run: pip install selenium-stealth')) {
+                return;
+            }
+
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = 'Installing...';
+            btn.disabled = true;
+
+            try {
+                const resp = await fetch('/api/stealth/install-deps', {
+                    method: 'POST'
+                });
+                const result = await resp.json();
+
+                if (result.status === 'success') {
+                    alert('✅ selenium-stealth installed successfully!\n\n' + result.message);
+                    refreshStealthStatus();
+                } else if (result.status === 'timeout') {
+                    alert('⏱️ Installation timed out. Please try manually:\n\npip install selenium-stealth');
+                } else {
+                    alert('❌ Installation failed:\n\n' + result.message + '\n\n' + (result.output || ''));
+                }
+            } catch (e) {
+                alert('Error installing dependencies: ' + e);
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function viewStealthLog() {
+            const section = document.getElementById('logViewerSection');
+            section.style.display = 'block';
+            document.getElementById('logContent').innerText = 'Loading log...';
+
+            try {
+                const resp = await fetch('/api/stealth/log');
+                const result = await resp.json();
+
+                if (result.lines && result.lines.length > 0) {
+                    const logText = result.lines.join('');
+                    document.getElementById('logContent').innerText = `Total lines: ${result.total_lines}\nShowing last ${result.lines.length} lines:\n\n${logText}`;
+                } else {
+                    document.getElementById('logContent').innerText = result.message || 'No log data available.';
+                }
+            } catch (e) {
+                document.getElementById('logContent').innerText = 'Error loading log: ' + e;
+            }
+        }
+
+        // ==================== END STEALTH MODE FUNCTIONS ====================
+
+        // ==================== PAGE INITIALIZATION ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("Page loaded. Initializing...");
+
+            // 1. Load file lists
+            if (typeof refreshFiles === 'function') {
+                refreshFiles();
+            } else {
+                console.error("refreshFiles function not found!");
+            }
+
+            // 2. Initialize Stealth Status
+            if (typeof refreshStealthStatus === 'function') {
+                refreshStealthStatus();
+            }
+
+            // 3. Setup Template Select Listeners if needed
+            const select = document.getElementById('templateSelect');
+            if (select) {
+                select.addEventListener('change', (e) => {
+                    const textarea = document.getElementById('manualMessage');
+                    if (e.target.value === 'custom') {
+                        textarea.value = "";
+                        textarea.placeholder = "Type your custom message here...";
+                    } else if (SMS_TEMPLATES[e.target.value]) {
+                        textarea.value = SMS_TEMPLATES[e.target.value];
+                    }
+                });
+            }
+        });
+
     </script>
 </body>
 

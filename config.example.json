@@ -1,9 +1,10 @@
 {
-    "VIDEO_DIR": "C:\\Antigravity\\VideoAudioConvert\\data\\Video",
-    "AUDIO_DIR": "C:\\Antigravity\\VideoAudioConvert\\data\\Audio",
-    "TXT_DIR": "C:\\Antigravity\\VideoAudioConvert\\data\\TXT",
-    "WAV_DIR": "C:\\Antigravity\\VideoAudioConvert\\data\\PhoneReCO",
-    "WAV_TXT_DIR": "C:\\Antigravity\\VideoAudioConvert\\data\\PhoneTXT",
+    "VIDEO_DIR": "C:\\Users\\DELL-MUYYZ04\\Videos\\TEXTNOW\\Video",
+    "AUDIO_DIR": "C:\\Users\\DELL-MUYYZ04\\Videos\\TEXTNOW\\Audio",
+    "TXT_DIR": "C:\\Users\\DELL-MUYYZ04\\Videos\\TEXTNOW\\TXT",
+    "WAV_DIR": "C:\\Users\\DELL-MUYYZ04\\Videos\\TEXTNOW\\PhoneReCO",
+    "WAV_TXT_DIR": "C:\\Users\\DELL-MUYYZ04\\Videos\\TEXTNOW\\PhoneTXT",
+    "REPLY_COOLDOWN_HOURS": 8,
     "ACTIVE_AI": "Groq",
     "AI_PROVIDERS": {
         "OpenAI": {
@@ -17,7 +18,7 @@
             "model": "command-r"
         },
         "Groq": {
-            "api_key": "YOUR_GROQ_KEY",
+            "api_key": "YOUR_GROQ_API_KEY_HERE",
             "base_url": "https://api.groq.com/openai/v1",
             "model": "llama-3.3-70b-versatile"
         },
