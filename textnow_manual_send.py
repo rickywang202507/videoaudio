@@ -11,68 +11,60 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 
 # 预设SMS模板
-TEMPLATES = {
-    "1": {
-        "name": "未接来电标准回复（中英文）",
-        "content": """尊敬的旅客，
-很抱歉未能接听您的来电，请参考以下信息：
-购票：请访问东航官网 www.ceair.com，或联系您的代理人 / 第三方网站。
-退改票：
-– 如在东航官网购票，请发送邮件至 MUYVR@chinaeastern.ca
-– 其他渠道购票，请联系原购票渠道。
-中转服务：
-https://www.ceair.com/self-service/service-submit/transferService
-特殊服务申请：
-– 温哥华始发：MUYVR@chinaeastern.ca
-– 多伦多始发：MUyyzSales@chinaeastern.ca
-改名服务：请致电 011 86 21 2069 5530
-其他事项：请发送邮件至 MUyyzSales@chinaeastern.ca or call 011 86 21 2069 5530
+import json
+import os
+import sys
 
-免责声明：本短信为系统自动回复，仅供参考，请旅客自行核实相关信息。本号码无法接收回复短信，敬请谅解。
+# Add current dir to path to find ai_service if needed
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-Dear Customer,
-Sorry we missed your call. Please refer to the information below.
+from ai_service import AIService
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
-For ticket purchase, please visit China Eastern official website www.ceair.com, or contact your agent / third-party website.
+# Helper to load config
+def load_config():
+    try:
+        with open("config.json", "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return {}
 
-For refund or change:
-– If ticket purchased on China Eastern website, please email MUYVR@chinaeastern.ca
+# Helper to load templates
+def load_templates():
+    try:
+        with open("templates.json", "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return {}
 
-– Otherwise, please contact original purchase channel.
-
-Transfer service:
-https://www.ceair.com/self-service/service-submit/transferService
-
-Special service request:
-– Vancouver departure: MUYVR@chinaeastern.ca
-
-– Toronto departure: MUyyzSales@chinaeastern.ca
-
-Name change: please call 011 86 21 2069 5530
-
-Other inquiries: please email MUyyzSales@chinaeastern.ca or call 011 86 21 2069 5530
-
-Disclaimer: This is an auto-reply message. Information is for reference only, please verify by yourself. Do not reply to this message, replies cannot be received."""
-    },
-    "2": {
-        "name": "简短回复（仅中文）",
-        "content": """尊敬的旅客，
-很抱歉未能接听您的来电。
-如需帮助，请发送邮件至 MUyyzSales@chinaeastern.ca
-或致电 011 86 21 2069 5530
-
-谢谢！"""
-    },
-    "3": {
-        "name": "简短回复（仅英文）",
-        "content": """Dear Customer,
-Sorry we missed your call.
-For assistance, please email MUyyzSales@chinaeastern.ca
-or call 011 86 21 2069 5530
-
-Thank you!"""
-    }
-}
+def get_current_chat_history(driver):
+    """Scrapes the visible chat history from the current window."""
+    print("    [Info] Reading conversation history...")
+    history_text = ""
+    try:
+        # Strategy A: Look for the main chat area
+        history_els = driver.find_elements(By.CSS_SELECTOR, 
+            ".message-history, .conversation-list, [role='main'], main"
+        )
+        
+        if history_els:
+            for h in history_els:
+                if h.is_displayed():
+                    history_text += h.text + "\n"
+        else:
+            # Strategy B: Find Input box and look up
+            try:
+                inp = driver.find_element(By.ID, "message-input")
+                container = inp.find_element(By.XPATH, "./ancestor::div[contains(@class, 'conversation')] | ./ancestor::main")
+                history_text = container.text
+            except:
+                pass
+                
+    except Exception as e:
+        print(f"    [Error] Failed to read history: {e}")
+        
+    return history_text
 
 def send_message(driver, message):
     """发送消息到当前对话"""
@@ -142,6 +134,8 @@ def main():
     print("=" * 60)
     input("选好后按 ENTER 继续...")
     
+    last_ai_reply = None
+    
     while True:
         print("\n" + "=" * 60)
         print("选择操作:")
@@ -149,59 +143,102 @@ def main():
         print("1. 使用预设模板")
         print("2. 自定义消息")
         print("3. 退出")
+        print("4. AI 智能回复 (读取当前对话)")
         print("=" * 60)
         
-        choice = input("\n请选择 (1-3): ").strip()
+        choice = input("\n请选择 (1-4): ").strip()
         
         if choice == "3":
             print("\n再见！")
             break
         
         elif choice == "1":
+            # Load fresh templates every time
+            templates = load_templates()
+            if not templates:
+                print("❌ 错误：无法加载 templates.json")
+                continue
+
+            # Convert to list for selection
+            tmpl_list = []
+            for k, v in templates.items():
+                tmpl_list.append((k, v))
+            
             # 显示模板列表
             print("\n" + "=" * 60)
             print("可用模板:")
             print("=" * 60)
-            for key, template in TEMPLATES.items():
-                print(f"{key}. {template['name']}")
+            
+            for idx, (key, tmpl) in enumerate(tmpl_list):
+                active_mark = "[ACTIVE] " if tmpl.get("active", False) else ""
+                print(f"{idx+1}. {active_mark}{tmpl.get('name', key)}")
             print("=" * 60)
             
-            template_choice = input("\n选择模板 (1-3): ").strip()
-            
-            if template_choice in TEMPLATES:
-                template = TEMPLATES[template_choice]
-                print(f"\n已选择: {template['name']}")
+            try:
+                sel_idx = int(input(f"\n选择模板 (1-{len(tmpl_list)}): ").strip()) - 1
+                if 0 <= sel_idx < len(tmpl_list):
+                    selected_key, template = tmpl_list[sel_idx]
+                    
+                    # Combine CN and EN logic similar to automation
+                    raw_cn = template.get("content_cn", "Error")
+                    raw_en = template.get("content_en", "Error")
+                    
+                    full_content = f"中文内容:\n{raw_cn}\n\nEnglish Content:\n{raw_en}"
+                    
+                    print(f"\n已选择: {template.get('name', selected_key)}")
+                    print("\n消息预览:")
+                    print("-" * 60)
+                    print(full_content)
+                    print("-" * 60)
+                    
+                    # Note: Manual tool doesn't construct full msg with name/refID currently?
+                    # Let's just combine them simply for manual sending or ask user?
+                    # For simplicity, we send CN then EN joined by newlines.
+                    final_msg_to_send = f"{raw_cn}\n\n{raw_en}"
                 print("\n消息预览:")
                 print("-" * 60)
                 print(template['content'])
                 print("-" * 60)
                 
-                confirm = input("\n确认发送? (y/n): ").strip().lower()
-                if confirm == 'y':
-                    send_message(driver, template['content'])
+                    confirm = input("\n确认发送? (y/n): ").strip().lower()
+                    if confirm == 'y':
+                        send_message(driver, final_msg_to_send)
+                    else:
+                        print("已取消")
                 else:
-                    print("已取消")
-            else:
-                print("❌ 无效选择")
+                    print("❌ 无效选择")
+            except:
+                print("❌ 输入无效")
         
         elif choice == "2":
             # 自定义消息
             print("\n" + "=" * 60)
             print("输入自定义消息")
             print("=" * 60)
-            print("提示：")
-            print("- 输入多行文本，每行按ENTER")
-            print("- 输入完成后，单独一行输入 END 并按ENTER")
-            print("=" * 60)
             
             lines = []
-            while True:
-                line = input()
-                if line.strip() == "END":
-                    break
-                lines.append(line)
+            used_cached = False
             
-            custom_message = '\n'.join(lines)
+            if last_ai_reply:
+                print(f"💡 检测到上次生成的 AI 回复:\n{'-'*20}\n{last_ai_reply}\n{'-'*20}")
+                use = input("是否直接使用此回复? (y/n): ").strip().lower()
+                if use == 'y':
+                    custom_message = last_ai_reply
+                    used_cached = True
+            
+            if not used_cached:
+                print("提示：")
+                print("- 输入多行文本，每行按ENTER")
+                print("- 输入完成后，单独一行输入 END 并按ENTER")
+                print("=" * 60)
+                
+                while True:
+                    line = input()
+                    if line.strip() == "END":
+                        break
+                    lines.append(line)
+                
+                custom_message = '\n'.join(lines)
             
             if custom_message.strip():
                 print("\n消息预览:")
@@ -219,6 +256,67 @@ def main():
         
         else:
             print("❌ 无效选择")
+        
+        elif choice == "4":
+            # AI Smart Reply
+            print("\n正在初始化 AI...")
+            cfg = load_config()
+            ai_service = None
+            try:
+                ai_service = AIService(cfg)
+            except Exception as e:
+                print(f"❌ AI 初始化失败: {e}")
+                continue
+
+            # 1. Get History
+            hist = get_current_chat_history(driver)
+            if not hist or len(hist) < 5:
+                print("⚠ 警告: 未能读取到足够的对话历史，或对话为空。")
+                cont = input("是否继续尝试生成? (y/n): ").strip().lower()
+                if cont != 'y': continue
+            
+            # 2. Get Active Template
+            templates = load_templates()
+            active_tmpl_key = "standard_reply"
+            for k, v in templates.items():
+                if v.get("active", False):
+                    active_tmpl_key = k
+                    break
+            
+            target_tmpl = templates.get(active_tmpl_key, {})
+            tmpl_name = target_tmpl.get("name", "Unknown")
+            print(f"Drafting reply using template: [{tmpl_name}]...")
+            
+            # Construct template text for AI
+            raw_cn = target_tmpl.get("content_cn", "")
+            raw_en = target_tmpl.get("content_en", "")
+            base_info = f"{raw_cn}\n\n{raw_en}"
+            
+            # 3. Generate
+            print("🤖 AI 正在思考 (Detecting Language & Drafting)...")
+            reply = ai_service.generate_reply_from_history(hist, template_text=base_info)
+            
+            if not reply:
+                print("❌ AI 生成失败 (返回为空)")
+                continue
+                
+            print("\n🤖 AI 建议回复:")
+            print("-" * 60)
+            print(reply)
+            print("-" * 60)
+            
+            # Save for manual use
+            last_ai_reply = reply
+            
+            action = input("\n[S]发送 / [R]重试 / [C]取消? ").strip().lower()
+            if action == 's':
+                send_message(driver, reply)
+            elif action == 'r':
+                print("重试中...")
+                # Could loop here, but simple re-select 4 is fine
+                pass
+            else:
+                print("已取消")
         
         print("\n")
 

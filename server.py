@@ -305,7 +305,7 @@ def launch_chrome():
             chrome_exe = p
             break
             
-    profile_dir = os.path.join(BASE_DIR, "chrome_profile_debug")
+    profile_dir = os.path.join(BASE_DIR, "chrome_profile_stealth")
     if not os.path.exists(profile_dir):
         os.makedirs(profile_dir)
         
@@ -572,7 +572,7 @@ def get_stealth_status():
         "stealth_script_exists": os.path.exists(os.path.join(BASE_DIR, "stealth_injector.js")),
         "stealth_utils_exists": os.path.exists(os.path.join(BASE_DIR, "stealth_utils.py")),
         "selenium_stealth_installed": False,
-        "chrome_profile_stealth_exists": os.path.exists(os.path.join(BASE_DIR, "chrome_profile_manual")), # Update to match manual profile
+        "chrome_profile_stealth_exists": os.path.exists(os.path.join(BASE_DIR, "chrome_profile_stealth")),
         "has_portable_chrome": has_portable
     }
     
